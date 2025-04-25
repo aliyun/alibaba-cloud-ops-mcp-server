@@ -47,8 +47,15 @@ class ApiMetaClient:
     @classmethod
     def get_service_version(cls, service):
         data = cls.get_response_from_pop_api(cls.GET_PRODUCT_LIST)
-        version = next((item.get(DEFAULT_VERSION) for item in data if item.get(CODE).lower() == service), None)
+        version = next((item.get(DEFAULT_VERSION) for item in data if item.get(CODE).lower() == service.lower()), None)
         return version
+
+    @classmethod
+    def get_all_service_info(cls):
+        data = cls.get_response_from_pop_api(cls.GET_PRODUCT_LIST)
+        filtered_data = [{"code": item["code"], "name": item["name"]} for item in data]
+
+        return filtered_data
 
     @classmethod
     def get_service_style(cls, service):
@@ -147,7 +154,8 @@ class ApiMetaClient:
         return combined_params
 
     @classmethod
-    def get_apis_in_service(cls, service, version):
+    def get_apis_in_service(cls, service):
+        version = cls.get_service_version(service)
         data = cls.get_response_from_pop_api(cls.GET_API_OVERVIEW, service=service, version=version)
         apis = list(data[APIS].keys())
         return apis
