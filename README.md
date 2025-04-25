@@ -1,5 +1,8 @@
 # alibaba-cloud-ops-mcp-server
 [中文版本](./README_zh.md)
+
+[![smithery badge](https://smithery.ai/badge/@aliyun/alibaba-cloud-ops-mcp-server)](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server)
+
 ## Prepare
 
 Install [uv](https://github.com/astral-sh/uv)
@@ -12,6 +15,14 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ## Configuration
 
 Use [VS Code](https://code.visualstudio.com/) + [Cline](https://cline.bot/) to config MCP Server.
+
+### Installing via Smithery
+
+To install Alibaba Cloud Operations Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server):
+
+```bash
+npx -y @smithery/cli install @aliyun/alibaba-cloud-ops-mcp-server --client claude
+```
 
 To use `alibaba-cloud-ops-mcp-server` MCP Server with any other MCP Client, you can manually add this configuration and restart for changes to take effect:
 
