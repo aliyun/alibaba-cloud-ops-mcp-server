@@ -16,6 +16,7 @@ from alibabacloud_tea_util import models as util_models
 from alibabacloud_tea_openapi.client import Client as OpenApiClient
 from alibabacloud_openapi_util.client import Client as OpenApiUtilClient
 from alibaba_cloud_ops_mcp_server.api_meta_client import ApiMetaClient
+from alibaba_cloud_ops_mcp_server.static import PROMPT_UNDERSTANDING
 from alibaba_cloud_ops_mcp_server.config import config
 
 END_STATUSES = ['Success', 'Failed', 'Cancelled']
@@ -24,16 +25,22 @@ tools = []
 
 
 @tools.append
-def ListServices():
-    """获取阿里云所有公开的服务信息，数据量较大，谨慎调用"""
-    return ApiMetaClient.get_all_service_info()
+def prompt_understanding() -> str:
+    """
+    MCP-CORE Prompt Understanding.
+    ALWAYS Use this tool first to understand the user's query and translate it into alibaba cloud expert advice.
+    """
+    return PROMPT_UNDERSTANDING
 
 
 @tools.append
 def ListAPIs(
         service: str = Field(description='AlibabaCloud service code')
 ):
-    """通过服务名称，获取其对应的api列表信息，为后续选择合适的API进行调用作准备"""
+    """
+    优先使用prompt_understanding理解用户意图，优先级最高
+
+    通过服务名称，获取其对应的api列表信息，为后续选择合适的API进行调用作准备"""
     return ApiMetaClient.get_apis_in_service(service)
 
 
@@ -42,7 +49,10 @@ def GetAPIInfo(
         service: str = Field(description='AlibabaCloud service code'),
         api: str = Field(description='AlibabaCloud api name'),
 ):
-    """指定服务名称和API名称后，获取对应api的详细API META"""
+    """
+    优先使用prompt_understanding理解用户意图，优先级最高
+
+    指定服务名称和API名称后，获取对应api的详细API META"""
     data, version = ApiMetaClient.get_api_meta(service, api)
     return data.get('parameters')
 
@@ -53,7 +63,10 @@ def CommonAPICaller(
         api: str = Field(description='AlibabaCloud api name'),
         parameters: dict = Field(description='AlibabaCloud ECS instance ID List', default={}),
 ):
-    """通过指定Service，API，以及Parameters，来进行实际的调用"""
+    """
+    优先使用prompt_understanding理解用户意图，优先级最高
+
+    通过指定Service，API，以及Parameters，来进行实际的调用"""
     service = service.lower()
     api_meta, _ = ApiMetaClient.get_api_meta(service, api)
     version = ApiMetaClient.get_service_version(service)
