@@ -25,10 +25,10 @@ tools = []
 
 
 @tools.append
-def prompt_understanding() -> str:
+def PromptUnderstanding() -> str:
     """
     MCP-CORE Prompt Understanding.
-    ALWAYS Use this tool first to understand the user's query and translate it into alibaba cloud expert advice.
+    始终首先使用此工具来了解用户的查询并将其转化为阿里巴巴云专家的建议。
     """
     return PROMPT_UNDERSTANDING
 
@@ -38,8 +38,6 @@ def ListAPIs(
         service: str = Field(description='AlibabaCloud service code')
 ):
     """
-    优先使用prompt_understanding理解用户意图，优先级最高
-
     通过服务名称，获取其对应的api列表信息，为后续选择合适的API进行调用作准备"""
     return ApiMetaClient.get_apis_in_service(service)
 
@@ -50,8 +48,6 @@ def GetAPIInfo(
         api: str = Field(description='AlibabaCloud api name'),
 ):
     """
-    优先使用prompt_understanding理解用户意图，优先级最高
-
     指定服务名称和API名称后，获取对应api的详细API META"""
     data, version = ApiMetaClient.get_api_meta(service, api)
     return data.get('parameters')
@@ -64,8 +60,6 @@ def CommonAPICaller(
         parameters: dict = Field(description='AlibabaCloud ECS instance ID List', default={}),
 ):
     """
-    优先使用prompt_understanding理解用户意图，优先级最高
-
     通过指定Service，API，以及Parameters，来进行实际的调用"""
     service = service.lower()
     api_meta, _ = ApiMetaClient.get_api_meta(service, api)
