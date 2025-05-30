@@ -1,6 +1,6 @@
 [project]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.8.9"
+version = "0.9.0"
 description = "A MCP server for Alibaba Cloud"
 readme = "README.md"
 authors = [
@@ -26,12 +26,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/alibaba_cloud_ops_mcp_server"]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.4.0",
-    "pytest-cov>=6.1.1",
-]
 
 [project.scripts]
 alibaba-cloud-ops-mcp-server = "alibaba_cloud_ops_mcp_server:main"
