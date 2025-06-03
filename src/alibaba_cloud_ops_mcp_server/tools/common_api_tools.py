@@ -1,3 +1,4 @@
+import logging
 import os
 from pydantic import Field
 from alibabacloud_tea_openapi import models as open_api_models
@@ -12,13 +13,31 @@ END_STATUSES = ['Success', 'Failed', 'Cancelled']
 
 tools = []
 
+_CUSTOM_SERVICE_LIST = None
+
+logger = logging.getLogger(__name__)
+
+
+def set_custom_service_list(service_list):
+    global _CUSTOM_SERVICE_LIST
+    _CUSTOM_SERVICE_LIST = service_list
+
 
 @tools.append
 def PromptUnderstanding() -> str:
     """
     Always use this tool first to understand the user's query and convert it into suggestions from Alibaba Cloud experts.
     """
-    return PROMPT_UNDERSTANDING
+    global _CUSTOM_SERVICE_LIST
+
+    content = PROMPT_UNDERSTANDING
+    if _CUSTOM_SERVICE_LIST:
+        import re
+        pattern = r'Supported Services\s*:\s*\n(?:\s{3}- .+?\n)+'
+        replacement = f"Supported Services:\n   - " + "\n   - ".join([f"{k}: {v}" for k, v in _CUSTOM_SERVICE_LIST])
+        content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+    return content
 
 
 @tools.append

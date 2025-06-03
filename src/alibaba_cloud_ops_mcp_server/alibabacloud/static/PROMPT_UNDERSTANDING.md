@@ -15,7 +15,6 @@ After the user submits a request, please first analyze which direction the user'
    - ecs: Elastic Compute Service (ECS)
    - oos: Operations Orchestration Service (OOS)
    - rds: Relational Database Service (RDS)
-   - oss: Object Storage Service (OSS)
    - vpc: Virtual Private Cloud (VPC)
    - slb: Server Load Balancer (SLB)
    - ess: Elastic Scaling (ESS)
