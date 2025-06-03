@@ -26,7 +26,7 @@ def ListAPIs(
         service: str = Field(description='AlibabaCloud service code')
 ):
     """
-    Get the corresponding API list information through the service name to prepare for the subsequent selection of the appropriate API to call
+    Use PromptUnderstanding tool first to understand the user's query, Get the corresponding API list information through the service name to prepare for the subsequent selection of the appropriate API to call
     """
     return ApiMetaClient.get_apis_in_service(service)
 
@@ -37,7 +37,7 @@ def GetAPIInfo(
         api: str = Field(description='AlibabaCloud api name'),
 ):
     """
-    After specifying the service name and API name, get the detailed API META of the corresponding API
+    Use PromptUnderstanding tool first to understand the user's query, After specifying the service name and API name, get the detailed API META of the corresponding API
     """
     data, version = ApiMetaClient.get_api_meta(service, api)
     return data.get('parameters')
@@ -50,6 +50,6 @@ def CommonAPICaller(
         parameters: dict = Field(description='AlibabaCloud ECS instance ID List', default={}),
 ):
     """
-    Perform the actual call by specifying the Service, API, and Parameters
+    Use PromptUnderstanding tool first to understand the user's query, Perform the actual call by specifying the Service, API, and Parameters
     """
     return _tools_api_call(service, api, parameters, None)

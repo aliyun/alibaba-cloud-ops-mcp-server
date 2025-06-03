@@ -24,12 +24,38 @@ type_map = {
     'number': float
 }
 
+REGION_ENDPOINT_SERVICE = ['ecs', 'oos', 'vpc', 'slb']
+
+DOUBLE_ENDPOINT_SERVICE = {
+    'rds': ['cn-qingdao', 'cn-beijing', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan', 'cn-guangzhou', 'cn-hongkong'],
+    'ess': ['cn-qingdao', 'cn-beijing', 'cn-hangzhou', 'cn-shanghai', 'cn-nanjing', 'cn-shenzhen'],
+    'ros': ['cn-qingdao'],
+    'dds': ['cn-qingdao', 'cn-beijing', 'cn-wulanchabu', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan', 'cn-guangzhou'],
+    'r-kvstore': ['cn-qingdao', 'cn-beijing', 'cn-wulanchabu', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan']
+}
+
+CENTRAL_ENDPOINTS_SERVICE = ['cbn']
+
+
+def _get_service_endpoint(service: str, region_id: str):
+    region_id = region_id.lower()
+    use_region_endpoint = service in REGION_ENDPOINT_SERVICE or (
+            service in DOUBLE_ENDPOINT_SERVICE and region_id in DOUBLE_ENDPOINT_SERVICE[service]
+    )
+
+    if use_region_endpoint:
+        return f'{service}.{region_id}.aliyuncs.com'
+    elif service in CENTRAL_ENDPOINTS_SERVICE or service in DOUBLE_ENDPOINT_SERVICE:
+        return f'{service}.aliyuncs.com'
+    else:
+        return f'{service}.{region_id}.aliyuncs.com'
+
 
 def create_client(service: str, region_id: str) -> OpenApiClient:
     config = create_config()
     if isinstance(service, str):
         service = service.lower()
-    config.endpoint = f'{service}.{region_id}.aliyuncs.com'
+    config.endpoint = _get_service_endpoint(service, region_id.lower())
     return OpenApiClient(config)
 
 
