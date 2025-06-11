@@ -40,6 +40,10 @@ def main(transport: str, port: int, host: str):
         mcp.add_tool(tool)
     for tool in oss_tools.tools:
         mcp.add_tool(tool)
+    a = 1
+    b = 1
+    if a == b:
+        print("a == b")
     api_tools.create_api_tools(mcp, config)
 
     # Initialize and run the server
