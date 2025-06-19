@@ -331,7 +331,8 @@ def test_prompt_understanding_default():
     # _CUSTOM_SERVICE_LIST 为空
     import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
     ca._CUSTOM_SERVICE_LIST = None
-    result = PromptUnderstanding()
+    fn = ca.tools[0]  # PromptUnderstanding
+    result = fn()
     assert isinstance(result, str)
     assert 'Supported Services' in result
 
@@ -339,25 +340,32 @@ def test_prompt_understanding_with_custom_service():
     # _CUSTOM_SERVICE_LIST 有值
     import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
     ca._CUSTOM_SERVICE_LIST = [('ecs', 'ECS服务'), ('rds', 'RDS服务')]
-    result = PromptUnderstanding()
+    fn = ca.tools[0]  # PromptUnderstanding
+    result = fn()
     assert 'ecs: ECS服务' in result and 'rds: RDS服务' in result
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools.ApiMetaClient.get_apis_in_service')
 def test_list_apis(mock_get):
+    import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
+    fn = ca.tools[1]  # ListAPIs
     mock_get.return_value = ['DescribeInstances', 'StartInstance']
-    result = ListAPIs('ecs')
+    result = fn('ecs')
     assert result == ['DescribeInstances', 'StartInstance']
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools.ApiMetaClient.get_api_meta')
 def test_get_api_info(mock_get):
+    import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
+    fn = ca.tools[2]  # GetAPIInfo
     mock_get.return_value = ({'parameters': [{'name': 'foo'}]}, '2014-05-26')
-    result = GetAPIInfo('ecs', 'DescribeInstances')
+    result = fn('ecs', 'DescribeInstances')
     assert result == [{'name': 'foo'}]
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools._tools_api_call')
 def test_common_api_caller(mock_call):
+    import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
+    fn = ca.tools[3]  # CommonAPICaller
     mock_call.return_value = {'result': 'ok'}
-    result = CommonAPICaller('ecs', 'DescribeInstances', {'foo': 'bar'})
+    result = fn('ecs', 'DescribeInstances', {'foo': 'bar'})
     assert result == {'result': 'ok'}
 
 @patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiClient', autospec=True)
