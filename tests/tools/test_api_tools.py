@@ -368,9 +368,11 @@ def test_common_api_caller(mock_call):
     result = fn('ecs', 'DescribeInstances', {'foo': 'bar'})
     assert result == {'result': 'ok'}
 
+@patch('alibaba_cloud_ops_mcp_server.tools.api_tools.create_config')
 @patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiClient', autospec=True)
-def test_create_client(mock_client):
+def test_create_client(mock_client, mock_create_config):
     from alibaba_cloud_ops_mcp_server.tools import api_tools
+    mock_create_config.return_value = MagicMock()
     mock_client.return_value = 'client_obj'
     result = api_tools.create_client('ecs', 'cn-hangzhou')
     assert result == 'client_obj'
