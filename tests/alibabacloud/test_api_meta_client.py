@@ -300,3 +300,15 @@ def test_get_ref_api_meta_valid_path(mock_pop_api, mock_std):
         }
     }
     assert result == expected
+
+@patch('alibaba_cloud_ops_mcp_server.alibabacloud.api_meta_client.ApiMetaClient.get_response_from_pop_api')
+def test_get_all_service_info(mock_get):
+    mock_get.return_value = [
+        {"code": "ecs", "name": "Elastic Compute Service"},
+        {"code": "rds", "name": "Relational Database Service"}
+    ]
+    result = api_meta_client.ApiMetaClient.get_all_service_info()
+    assert result == [
+        {"code": "ecs", "name": "Elastic Compute Service"},
+        {"code": "rds", "name": "Relational Database Service"}
+    ]
