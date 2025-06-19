@@ -376,3 +376,14 @@ def test_create_client(mock_client, mock_create_config):
     mock_client.return_value = 'client_obj'
     result = api_tools.create_client('ecs', 'cn-hangzhou')
     assert result == 'client_obj'
+
+def test_get_service_endpoint_all_branches():
+    from alibaba_cloud_ops_mcp_server.tools.api_tools import _get_service_endpoint
+    # REGION_ENDPOINT_SERVICE 分支
+    assert _get_service_endpoint('ecs', 'cn-hangzhou') == 'ecs.cn-hangzhou.aliyuncs.com'
+    # DOUBLE_ENDPOINT_SERVICE 且 region 匹配
+    assert _get_service_endpoint('rds', 'cn-hangzhou') == 'rds.cn-hangzhou.aliyuncs.com'
+    # CENTRAL_ENDPOINTS_SERVICE 分支
+    assert _get_service_endpoint('cbn', 'cn-hangzhou') == 'cbn.aliyuncs.com'
+    # 其它分支
+    assert _get_service_endpoint('unknown', 'cn-test') == 'unknown.cn-test.aliyuncs.com'
