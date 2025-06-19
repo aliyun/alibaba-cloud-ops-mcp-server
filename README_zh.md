@@ -39,6 +39,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 }
 ```
 
+[详细参数说明见 MCP 启动参数文档](./README_mcp_args.md)
+
 ## MCP市场集成
 
 * [Cline](https://cline.bot/mcp-marketplace)
@@ -99,5 +101,3 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 如果您有任何疑问，欢迎加入 [Alibaba Cloud Ops MCP 交流群](https://qr.dingtalk.com/action/joingroup?code=v1,k1,iFxYG4jjLVh1jfmNAkkclji7CN5DSIdT+jvFsLyI60I=&_dt_no_comment=1&origin=11) (钉钉群：113455011677) 进行交流。
 
 <img src="https://oos-public-cn-hangzhou.oss-cn-hangzhou.aliyuncs.com/alibaba-cloud-ops-mcp-server/Alibaba-Cloud-Ops-MCP-User-Group-zh.png" width="500">
-
-[详细参数说明见 MCP 启动参数文档](./README_mcp_args.md)
