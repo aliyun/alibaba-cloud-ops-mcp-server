@@ -29,3 +29,9 @@ packages = ["src/alibaba_cloud_ops_mcp_server"]
 
 [project.scripts]
 alibaba-cloud-ops-mcp-server = "alibaba_cloud_ops_mcp_server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.1.1",
+]
