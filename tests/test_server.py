@@ -15,7 +15,7 @@ def test_main_run(mock_create_api_tools, mock_FastMCP):
         mock_FastMCP.assert_called_once_with(
             name='alibaba-cloud-ops-mcp-server',
             port=12345, host='127.0.0.1')
-        assert mcp.add_tool.call_count == 3  # oss/oos/cms 各1
+        assert mcp.add_tool.call_count == 7  # common_api_tools 4 + oss/oos/cms 各1
         mock_create_api_tools.assert_called_once()
         mcp.run.assert_called_once_with(transport='stdio')
 

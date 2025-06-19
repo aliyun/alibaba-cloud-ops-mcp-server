@@ -3,6 +3,9 @@ from unittest.mock import patch, MagicMock
 from alibaba_cloud_ops_mcp_server.tools import api_tools
 import json
 from alibaba_cloud_ops_mcp_server.tools import common_api_tools
+from alibaba_cloud_ops_mcp_server.tools.common_api_tools import (
+    PromptUnderstanding, ListAPIs, GetAPIInfo, CommonAPICaller
+)
 
 def fake_api_meta(post=False, no_summary=False):
     meta = {
@@ -326,36 +329,38 @@ def test_create_tool_function_with_signature_bind_with_positional_args():
 
 def test_prompt_understanding_default():
     # _CUSTOM_SERVICE_LIST 为空
-    common_api_tools._CUSTOM_SERVICE_LIST = None
-    result = common_api_tools.PromptUnderstanding()
+    import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
+    ca._CUSTOM_SERVICE_LIST = None
+    result = PromptUnderstanding()
     assert isinstance(result, str)
     assert 'Supported Services' in result
 
 def test_prompt_understanding_with_custom_service():
     # _CUSTOM_SERVICE_LIST 有值
-    common_api_tools._CUSTOM_SERVICE_LIST = [('ecs', 'ECS服务'), ('rds', 'RDS服务')]
-    result = common_api_tools.PromptUnderstanding()
+    import alibaba_cloud_ops_mcp_server.tools.common_api_tools as ca
+    ca._CUSTOM_SERVICE_LIST = [('ecs', 'ECS服务'), ('rds', 'RDS服务')]
+    result = PromptUnderstanding()
     assert 'ecs: ECS服务' in result and 'rds: RDS服务' in result
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools.ApiMetaClient.get_apis_in_service')
 def test_list_apis(mock_get):
     mock_get.return_value = ['DescribeInstances', 'StartInstance']
-    result = common_api_tools.ListAPIs('ecs')
+    result = ListAPIs('ecs')
     assert result == ['DescribeInstances', 'StartInstance']
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools.ApiMetaClient.get_api_meta')
 def test_get_api_info(mock_get):
     mock_get.return_value = ({'parameters': [{'name': 'foo'}]}, '2014-05-26')
-    result = common_api_tools.GetAPIInfo('ecs', 'DescribeInstances')
+    result = GetAPIInfo('ecs', 'DescribeInstances')
     assert result == [{'name': 'foo'}]
 
 @patch('alibaba_cloud_ops_mcp_server.tools.common_api_tools._tools_api_call')
 def test_common_api_caller(mock_call):
     mock_call.return_value = {'result': 'ok'}
-    result = common_api_tools.CommonAPICaller('ecs', 'DescribeInstances', {'foo': 'bar'})
+    result = CommonAPICaller('ecs', 'DescribeInstances', {'foo': 'bar'})
     assert result == {'result': 'ok'}
 
-@patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiClient')
+@patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiClient', autospec=True)
 def test_create_client(mock_client):
     from alibaba_cloud_ops_mcp_server.tools import api_tools
     mock_client.return_value = 'client_obj'
