@@ -6,6 +6,7 @@ from pydantic import Field
 from alibabacloud_oss_v2 import Credentials
 from alibabacloud_oss_v2.credentials import EnvironmentVariableCredentialsProvider
 from alibabacloud_credentials.client import Client as CredClient
+from alibaba_cloud_ops_mcp_server.alibabacloud.utils import get_credentials_from_header
 
 
 tools = []
@@ -13,10 +14,16 @@ tools = []
 
 class CredentialsProvider(EnvironmentVariableCredentialsProvider):
     def __init__(self) -> None:
-        credentialsClient = CredClient()
-        access_key_id = credentialsClient.get_credential().access_key_id
-        access_key_secret = credentialsClient.get_credential().access_key_secret
-        session_token = credentialsClient.get_credential().security_token
+        credentials = get_credentials_from_header()
+        if credentials:
+            access_key_id = credentials.get('AccessKeyId', None)
+            access_key_secret = credentials.get('AccessKeySecret', None)
+            session_token = credentials.get('SecurityToken', None)
+        else:
+            credentialsClient = CredClient()
+            access_key_id = credentialsClient.get_credential().access_key_id
+            access_key_secret = credentialsClient.get_credential().access_key_secret
+            session_token = credentialsClient.get_credential().security_token
 
         self._credentials = Credentials(
             access_key_id, access_key_secret, session_token)

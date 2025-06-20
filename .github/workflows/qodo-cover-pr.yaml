@@ -1,0 +1,51 @@
+name: Qodo Cover PR (Auto Test Generation)
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  run-qodo-cover-pr:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install dependencies
+        run: |
+          uv pip install -e . --system
+          uv pip install pytest pytest-cov --system
+
+      - name: Run qodo-cover-pr
+        uses: ./.github/actions/qodo-cover-pr
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          project_language: python
+          project_root: .
+          model: openai/qwen-max
+          code_coverage_report_path: ./coverage.xml
+          coverage_type: cobertura
+          test_command: "pytest --cov=. --cov-report=xml --cov-report=term"
+          max_iterations: 3
+          desired_coverage: 100
+          run_each_test_separately: true
+          source_folder: .
+          test_folder: .
+          additional_instructions: "所有生成的测试必须包含详细中文docstring，且需标注'本测试用例由Qodo Cover自动生成'"
+          api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
