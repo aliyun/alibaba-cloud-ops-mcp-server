@@ -1,0 +1,48 @@
+name: Qodo Cover PR (Auto Test Generation)
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  run-qodo-cover-pr:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install dependencies
+        run: |
+          uv pip install -e . --system
+          uv pip install pytest pytest-cov --system
+
+      - name: Run qodo-cover-pr
+        uses: qodo-ai/qodo-ci/.github/actions/qodo-cover-pr@v0.1.12
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          project_language: python
+          project_root: .
+          code_coverage_report_path: ./coverage.xml
+          coverage_type: cobertura
+          test_command: "uv run pytest --cov=src --cov-report=xml"
+          max_iterations: 3
+          desired_coverage: 100
+          run_each_test_separately: true
+          source_folder: src
+          test_folder: .
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

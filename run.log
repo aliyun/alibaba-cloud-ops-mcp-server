@@ -1,0 +1,18 @@
+2025-06-23 03:23:01,758 - cover_agent.CoverAgent - INFO - Current Coverage: 55.56%
+2025-06-23 03:23:01,758 - cover_agent.CoverAgent - INFO - Desired Coverage: 100%
+2025-06-23 03:23:17,492 - cover_agent.CoverAgent - INFO - Reached above target coverage of 100% (Current Coverage: 100.0%) in 1 iterations.
+2025-06-23 03:23:17,492 - cover_agent.CoverAgent - INFO - Total number of input tokens used for LLM model gpt-4o: 2831
+2025-06-23 03:23:17,492 - cover_agent.CoverAgent - INFO - Total number of output tokens used for LLM model gpt-4o: 723
+FO - Initial coverage: 100.0%
+2025-06-23 03:22:59,923 - cover_agent.UnitTestValidator - INFO - Running build/test command to generate coverage report: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:01,757 - cover_agent.UnitTestValidator - INFO - Initial coverage: 55.56%
+2025-06-23 03:23:10,190 - cover_agent.UnitTestValidator - INFO - Running test with the following command: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:12,021 - cover_agent.UnitTestValidator - INFO - Test passed and coverage increased. Current coverage: 85.19%
+2025-06-23 03:23:12,031 - cover_agent.UnitTestValidator - INFO - Running test with the following command: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:13,828 - cover_agent.UnitTestValidator - INFO - Test did not increase coverage. Rolling back.
+2025-06-23 03:23:13,831 - cover_agent.UnitTestValidator - INFO - Running test with the following command: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:15,667 - cover_agent.UnitTestValidator - INFO - Test passed and coverage increased. Current coverage: 100.0%
+2025-06-23 03:23:15,670 - cover_agent.UnitTestValidator - INFO - Running build/test command to generate coverage report: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:17,492 - cover_agent.UnitTestValidator - INFO - Initial coverage: 100.0%
+2025-06-23 03:23:17,497 - cover_agent.UnitTestValidator - INFO - Running build/test command to generate coverage report: "uv run pytest tests/alibabacloud/test_utils.py --cov=src --cov-report=xml"
+2025-06-23 03:23:19,380 - cover_agent.UnitTestValidator - INFO - Initial coverage: 100.0%

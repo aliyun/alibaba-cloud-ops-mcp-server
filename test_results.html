@@ -1,0 +1,321 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Results</title>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.23.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 20px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+            }
+            th, td {
+                border: 1px solid #ddd;
+                text-align: left;
+                padding: 8px;
+            }
+            th {
+                background-color: #f2f2f2;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .status-pass {
+                color: green;
+            }
+            .status-fail {
+                color: red;
+            }
+            pre {
+                background-color: #282c34 !important;
+                color: #ffffff !important;
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+                white-space: pre-wrap;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 1.1em;  /* Slightly larger font size */
+            }
+        </style>
+    </head>
+    <body>
+        <table>
+            <tr>
+                <th>Status</th>
+                <th>Reason</th>
+                <th>Exit Code</th>
+                <th>Language</th>
+                <th>Modified Test File</th>
+                <th>Details</th>
+            </tr>
+            
+            <tr>
+                <td class="status-PASS">PASS</td>
+                <td></td>
+                <td>0</td>
+                <td>python</td>
+                <td>
+                    <details>
+                        <summary>View Full Code</summary>
+                        <pre><code><span class="diff-unchanged">  from unittest.mock import patch, MagicMock</span>
+<span class="diff-unchanged">  from alibaba_cloud_ops_mcp_server.alibabacloud import utils</span>
+<span class="diff-unchanged">  </span>
+<span class="diff-unchanged">  def test_create_config():</span>
+<span class="diff-unchanged">      with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.CredClient') as mock_cred, \</span>
+<span class="diff-unchanged">           patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.Config') as mock_cfg:</span>
+<span class="diff-unchanged">          cred = MagicMock()</span>
+<span class="diff-unchanged">          mock_cred.return_value = cred</span>
+<span class="diff-unchanged">          cfg = MagicMock()</span>
+<span class="diff-unchanged">          mock_cfg.return_value = cfg</span>
+<span class="diff-unchanged">          result = utils.create_config()</span>
+<span class="diff-unchanged">          assert result is cfg</span>
+<span class="diff-unchanged">          assert cfg.user_agent == 'alibaba-cloud-ops-mcp-server'</span>
+<span class="diff-unchanged">          mock_cred.assert_called_once()</span>
+<span class="diff-unchanged">          mock_cfg.assert_called_once_with(credential=cred) </span>
+<span class="diff-added">+ </span>
+<span class="diff-added">+ def test_get_credentials_from_header_with_all_headers():</span>
+<span class="diff-added">+     with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:</span>
+<span class="diff-added">+         mock_request.return_value.headers = {</span>
+<span class="diff-added">+             'x-ak-proven-access-key-id': 'test_id',</span>
+<span class="diff-added">+             'x-ak-proven-access-key-secret': 'test_secret',</span>
+<span class="diff-added">+             'x-acs-ak-proven': 'test_token'</span>
+<span class="diff-added">+         }</span>
+<span class="diff-added">+         credentials = utils.get_credentials_from_header()</span>
+<span class="diff-added">+         assert credentials == {</span>
+<span class="diff-added">+             'AccessKeyId': 'test_id',</span>
+<span class="diff-added">+             'AccessKeySecret': 'test_secret',</span>
+<span class="diff-added">+             'SecurityToken': 'test_token'</span>
+<span class="diff-added">+         }</span></code></pre>
+                    </details>
+                </td>
+                <td>
+                    <details>
+                        <summary>View More</summary>
+                        <div><strong>STDERR:</strong> <pre><code class="language-python"></code></pre></div>
+                        <div><strong>STDOUT:</strong> <pre><code class="language-python">============================= test session starts ==============================
+platform linux -- Python 3.10.17, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/runner/work/alibaba-cloud-ops-mcp-server/alibaba-cloud-ops-mcp-server
+configfile: pyproject.toml
+plugins: cov-6.2.1, anyio-4.9.0
+collected 2 items
+
+tests/alibabacloud/test_utils.py ..                                      [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.10.17-final-0 _______________
+
+Coverage XML written to file coverage.xml
+============================== 2 passed in 1.24s ===============================
+</code></pre></div>
+                        <div><strong>Test Code:</strong> <pre><code class="language-python">def test_get_credentials_from_header_with_all_headers():
+    with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:
+        mock_request.return_value.headers = {
+            'x-ak-proven-access-key-id': 'test_id',
+            'x-ak-proven-access-key-secret': 'test_secret',
+            'x-acs-ak-proven': 'test_token'
+        }
+        credentials = utils.get_credentials_from_header()
+        assert credentials == {
+            'AccessKeyId': 'test_id',
+            'AccessKeySecret': 'test_secret',
+            'SecurityToken': 'test_token'
+        }
+</code></pre></div>
+                        <div><strong>Imports:</strong> <pre><code class="language-python">""
+</code></pre></div>
+                    </details>
+                </td>
+            </tr>
+            
+            <tr>
+                <td class="status-FAIL">FAIL</td>
+                <td>Coverage did not increase. Maybe the test did run but did not increase coverage, or maybe the test execution was skipped due to some problem</td>
+                <td>0</td>
+                <td>python</td>
+                <td>
+                    <details>
+                        <summary>View Full Code</summary>
+                        <pre><code><span class="diff-unchanged">  from unittest.mock import patch, MagicMock</span>
+<span class="diff-unchanged">  from alibaba_cloud_ops_mcp_server.alibabacloud import utils</span>
+<span class="diff-unchanged">  </span>
+<span class="diff-unchanged">  def test_create_config():</span>
+<span class="diff-unchanged">      with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.CredClient') as mock_cred, \</span>
+<span class="diff-unchanged">           patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.Config') as mock_cfg:</span>
+<span class="diff-unchanged">          cred = MagicMock()</span>
+<span class="diff-unchanged">          mock_cred.return_value = cred</span>
+<span class="diff-unchanged">          cfg = MagicMock()</span>
+<span class="diff-unchanged">          mock_cfg.return_value = cfg</span>
+<span class="diff-unchanged">          result = utils.create_config()</span>
+<span class="diff-unchanged">          assert result is cfg</span>
+<span class="diff-unchanged">          assert cfg.user_agent == 'alibaba-cloud-ops-mcp-server'</span>
+<span class="diff-unchanged">          mock_cred.assert_called_once()</span>
+<span class="diff-unchanged">          mock_cfg.assert_called_once_with(credential=cred) </span>
+<span class="diff-unchanged">  </span>
+<span class="diff-added">+ def test_get_credentials_from_header_with_no_headers():</span>
+<span class="diff-added">+     with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:</span>
+<span class="diff-added">+         mock_request.return_value.headers = {}</span>
+<span class="diff-added">+         credentials = utils.get_credentials_from_header()</span>
+<span class="diff-added">+         assert credentials is None</span>
+<span class="diff-added">+ </span>
+<span class="diff-added">+ </span>
+<span class="diff-unchanged">  def test_get_credentials_from_header_with_all_headers():</span>
+<span class="diff-unchanged">      with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:</span>
+<span class="diff-unchanged">          mock_request.return_value.headers = {</span>
+<span class="diff-unchanged">              'x-ak-proven-access-key-id': 'test_id',</span>
+<span class="diff-unchanged">              'x-ak-proven-access-key-secret': 'test_secret',</span>
+<span class="diff-unchanged">              'x-acs-ak-proven': 'test_token'</span>
+<span class="diff-unchanged">          }</span>
+<span class="diff-unchanged">          credentials = utils.get_credentials_from_header()</span>
+<span class="diff-unchanged">          assert credentials == {</span>
+<span class="diff-unchanged">              'AccessKeyId': 'test_id',</span>
+<span class="diff-unchanged">              'AccessKeySecret': 'test_secret',</span>
+<span class="diff-unchanged">              'SecurityToken': 'test_token'</span>
+<span class="diff-unchanged">          }</span></code></pre>
+                    </details>
+                </td>
+                <td>
+                    <details>
+                        <summary>View More</summary>
+                        <div><strong>STDERR:</strong> <pre><code class="language-python"></code></pre></div>
+                        <div><strong>STDOUT:</strong> <pre><code class="language-python">============================= test session starts ==============================
+platform linux -- Python 3.10.17, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/runner/work/alibaba-cloud-ops-mcp-server/alibaba-cloud-ops-mcp-server
+configfile: pyproject.toml
+plugins: cov-6.2.1, anyio-4.9.0
+collected 3 items
+
+tests/alibabacloud/test_utils.py ...                                     [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.10.17-final-0 _______________
+
+Coverage XML written to file coverage.xml
+============================== 3 passed in 1.22s ===============================
+</code></pre></div>
+                        <div><strong>Test Code:</strong> <pre><code class="language-python">def test_get_credentials_from_header_with_no_headers():
+    with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:
+        mock_request.return_value.headers = {}
+        credentials = utils.get_credentials_from_header()
+        assert credentials is None
+</code></pre></div>
+                        <div><strong>Imports:</strong> <pre><code class="language-python">""
+</code></pre></div>
+                    </details>
+                </td>
+            </tr>
+            
+            <tr>
+                <td class="status-PASS">PASS</td>
+                <td></td>
+                <td>0</td>
+                <td>python</td>
+                <td>
+                    <details>
+                        <summary>View Full Code</summary>
+                        <pre><code><span class="diff-unchanged">  from unittest.mock import patch, MagicMock</span>
+<span class="diff-unchanged">  from alibaba_cloud_ops_mcp_server.alibabacloud import utils</span>
+<span class="diff-unchanged">  </span>
+<span class="diff-unchanged">  def test_create_config():</span>
+<span class="diff-unchanged">      with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.CredClient') as mock_cred, \</span>
+<span class="diff-unchanged">           patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.Config') as mock_cfg:</span>
+<span class="diff-unchanged">          cred = MagicMock()</span>
+<span class="diff-unchanged">          mock_cred.return_value = cred</span>
+<span class="diff-unchanged">          cfg = MagicMock()</span>
+<span class="diff-unchanged">          mock_cfg.return_value = cfg</span>
+<span class="diff-unchanged">          result = utils.create_config()</span>
+<span class="diff-unchanged">          assert result is cfg</span>
+<span class="diff-unchanged">          assert cfg.user_agent == 'alibaba-cloud-ops-mcp-server'</span>
+<span class="diff-unchanged">          mock_cred.assert_called_once()</span>
+<span class="diff-unchanged">          mock_cfg.assert_called_once_with(credential=cred) </span>
+<span class="diff-unchanged">  </span>
+<span class="diff-added">+ def test_create_config_with_credentials_from_header():</span>
+<span class="diff-added">+     with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request, \</span>
+<span class="diff-added">+          patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.Config') as mock_cfg:</span>
+<span class="diff-added">+         mock_request.return_value.headers = {</span>
+<span class="diff-added">+             'x-ak-proven-access-key-id': 'test_id',</span>
+<span class="diff-added">+             'x-ak-proven-access-key-secret': 'test_secret',</span>
+<span class="diff-added">+             'x-acs-ak-proven': 'test_token'</span>
+<span class="diff-added">+         }</span>
+<span class="diff-added">+         cfg = MagicMock()</span>
+<span class="diff-added">+         mock_cfg.return_value = cfg</span>
+<span class="diff-added">+         result = utils.create_config()</span>
+<span class="diff-added">+         assert result is cfg</span>
+<span class="diff-added">+         assert cfg.user_agent == 'alibaba-cloud-ops-mcp-server'</span>
+<span class="diff-added">+         mock_cfg.assert_called_once_with(</span>
+<span class="diff-added">+             access_key_id='test_id',</span>
+<span class="diff-added">+             access_key_secret='test_secret',</span>
+<span class="diff-added">+             security_token='test_token'</span>
+<span class="diff-added">+         )</span>
+<span class="diff-added">+ </span>
+<span class="diff-added">+ </span>
+<span class="diff-unchanged">  def test_get_credentials_from_header_with_all_headers():</span>
+<span class="diff-unchanged">      with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request:</span>
+<span class="diff-unchanged">          mock_request.return_value.headers = {</span>
+<span class="diff-unchanged">              'x-ak-proven-access-key-id': 'test_id',</span>
+<span class="diff-unchanged">              'x-ak-proven-access-key-secret': 'test_secret',</span>
+<span class="diff-unchanged">              'x-acs-ak-proven': 'test_token'</span>
+<span class="diff-unchanged">          }</span>
+<span class="diff-unchanged">          credentials = utils.get_credentials_from_header()</span>
+<span class="diff-unchanged">          assert credentials == {</span>
+<span class="diff-unchanged">              'AccessKeyId': 'test_id',</span>
+<span class="diff-unchanged">              'AccessKeySecret': 'test_secret',</span>
+<span class="diff-unchanged">              'SecurityToken': 'test_token'</span>
+<span class="diff-unchanged">          }</span></code></pre>
+                    </details>
+                </td>
+                <td>
+                    <details>
+                        <summary>View More</summary>
+                        <div><strong>STDERR:</strong> <pre><code class="language-python"></code></pre></div>
+                        <div><strong>STDOUT:</strong> <pre><code class="language-python">============================= test session starts ==============================
+platform linux -- Python 3.10.17, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/runner/work/alibaba-cloud-ops-mcp-server/alibaba-cloud-ops-mcp-server
+configfile: pyproject.toml
+plugins: cov-6.2.1, anyio-4.9.0
+collected 3 items
+
+tests/alibabacloud/test_utils.py ...                                     [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.10.17-final-0 _______________
+
+Coverage XML written to file coverage.xml
+============================== 3 passed in 1.23s ===============================
+</code></pre></div>
+                        <div><strong>Test Code:</strong> <pre><code class="language-python">def test_create_config_with_credentials_from_header():
+    with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.get_http_request') as mock_request, \
+         patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.Config') as mock_cfg:
+        mock_request.return_value.headers = {
+            'x-ak-proven-access-key-id': 'test_id',
+            'x-ak-proven-access-key-secret': 'test_secret',
+            'x-acs-ak-proven': 'test_token'
+        }
+        cfg = MagicMock()
+        mock_cfg.return_value = cfg
+        result = utils.create_config()
+        assert result is cfg
+        assert cfg.user_agent == 'alibaba-cloud-ops-mcp-server'
+        mock_cfg.assert_called_once_with(
+            access_key_id='test_id',
+            access_key_secret='test_secret',
+            security_token='test_token'
+        )
+</code></pre></div>
+                        <div><strong>Imports:</strong> <pre><code class="language-python">""
+</code></pre></div>
+                    </details>
+                </td>
+            </tr>
+            
+        </table>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.23.0/prism.min.js"></script>
+    </body>
+    </html>
+    
