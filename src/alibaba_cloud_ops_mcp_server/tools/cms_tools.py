@@ -6,7 +6,7 @@ import json
 from alibabacloud_cms20190101.client import Client as cms20190101Client
 from alibabacloud_cms20190101 import models as cms_20190101_models
 from alibaba_cloud_ops_mcp_server.alibabacloud.utils import create_config
-
+from alibaba_cloud_ops_mcp_server.utils.logging_decorator import tool_log
 
 END_STATUSES = ['Success', 'Failed', 'Cancelled']
 
@@ -36,6 +36,7 @@ def _get_cms_metric_data(region_id: str, instance_ids: List[str], metric_name: s
     return describe_metric_last_resp.body.datapoints
 
 @tools.append
+@tool_log
 def CMS_GetCpuUsageData(
     InstanceIds: List[str] = Field(description='AlibabaCloud ECS instance ID List'),
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou')
@@ -105,7 +106,7 @@ def CMS_GetDiskTotalData(
     """获取磁盘分区总容量指标数据"""
     return _get_cms_metric_data(RegionId, InstanceIds, 'diskusage_total')
 
-
+@tool_log
 @tools.append
 def CMS_GetDiskUsedData(
     InstanceIds: List[str] = Field(description='AlibabaCloud ECS instance ID List'),

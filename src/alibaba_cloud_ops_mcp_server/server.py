@@ -6,6 +6,8 @@ from alibaba_cloud_ops_mcp_server.tools.common_api_tools import set_custom_servi
 from alibaba_cloud_ops_mcp_server.config import config
 from alibaba_cloud_ops_mcp_server.tools import cms_tools, oos_tools, oss_tools, api_tools, common_api_tools
 
+from alibaba_cloud_ops_mcp_server.alibabacloud.utils import log_args_and_return
+
 logger = logging.getLogger(__name__)
 
 SUPPORTED_SERVICES_MAP = {
@@ -47,6 +49,7 @@ SUPPORTED_SERVICES_MAP = {
     default=None,
     help="Comma-separated list of supported services, e.g., 'ecs,vpc,rds'",
 )
+
 def main(transport: str, port: int, host: str, services: str):
     # Create an MCP server
     mcp = FastMCP(

@@ -44,3 +44,12 @@ def create_config():
         config = Config(credential=credentialsClient)
     config.user_agent = 'alibaba-cloud-ops-mcp-server'
     return config
+
+
+def log_args_and_return(func):
+    def wrapper(*args, **kwargs):
+        logger.info(f"Calling {func.__name__} with args: {args}, kwargs: {kwargs}")
+        result = func(*args, **kwargs)
+        logger.info(f"{func.__name__} returned: {result}")
+        return result
+    return wrapper
