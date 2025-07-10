@@ -5,6 +5,7 @@ import logging
 from alibaba_cloud_ops_mcp_server.tools.common_api_tools import set_custom_service_list
 from alibaba_cloud_ops_mcp_server.config import config
 from alibaba_cloud_ops_mcp_server.tools import cms_tools, oos_tools, oss_tools, api_tools, common_api_tools
+from alibaba_cloud_ops_mcp_server.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +48,22 @@ SUPPORTED_SERVICES_MAP = {
     default=None,
     help="Comma-separated list of supported services, e.g., 'ecs,vpc,rds'",
 )
-def main(transport: str, port: int, host: str, services: str):
+@click.option(
+    "--headers-credential-only",
+    type=bool,
+    default=False,
+    help="Comma-separated list of supported services, e.g., 'ecs,vpc,rds'",
+)
+def main(transport: str, port: int, host: str, services: str, headers_credential_only: bool):
     # Create an MCP server
     mcp = FastMCP(
         name="alibaba-cloud-ops-mcp-server",
         port=port,
-        host=host
+        host=host,
+        stateless_http=True
     )
-
+    if headers_credential_only:
+        settings.headers_credential_only = headers_credential_only
     if services:
         service_keys = [s.strip().lower() for s in services.split(",")]
         service_list = [(key, SUPPORTED_SERVICES_MAP.get(key, key)) for key in service_keys]
