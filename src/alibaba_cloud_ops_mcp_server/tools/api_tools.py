@@ -29,12 +29,11 @@ REGION_ENDPOINT_SERVICE = ['ecs', 'oos', 'vpc', 'slb']
 DOUBLE_ENDPOINT_SERVICE = {
     'rds': ['cn-qingdao', 'cn-beijing', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan', 'cn-guangzhou', 'cn-hongkong'],
     'ess': ['cn-qingdao', 'cn-beijing', 'cn-hangzhou', 'cn-shanghai', 'cn-nanjing', 'cn-shenzhen'],
-    'ros': ['cn-qingdao'],
     'dds': ['cn-qingdao', 'cn-beijing', 'cn-wulanchabu', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan', 'cn-guangzhou'],
     'r-kvstore': ['cn-qingdao', 'cn-beijing', 'cn-wulanchabu', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan']
 }
 
-CENTRAL_ENDPOINTS_SERVICE = ['cbn']
+CENTRAL_ENDPOINTS_SERVICE = ['cbn', 'ram', 'ros']
 
 
 def _get_service_endpoint(service: str, region_id: str):
