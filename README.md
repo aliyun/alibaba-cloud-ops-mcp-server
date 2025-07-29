@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/aliyun-alibaba-cloud-ops-mcp-server-badge.png)](https://mseep.ai/app/aliyun-alibaba-cloud-ops-mcp-server)
+
 # Alibaba Cloud Ops MCP Server
 
 [![GitHub stars](https://img.shields.io/github/stars/aliyun/alibaba-cloud-ops-mcp-server?style=social)](https://github.com/aliyun/alibaba-cloud-ops-mcp-server)
