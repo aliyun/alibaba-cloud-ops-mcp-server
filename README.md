@@ -2,6 +2,8 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/aliyun/alibaba-cloud-ops-mcp-server?style=social)](https://github.com/aliyun/alibaba-cloud-ops-mcp-server)
 
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/aliyun/alibaba-cloud-ops-mcp-server)](https://archestra.ai/mcp-catalog/aliyun__alibaba-cloud-ops-mcp-server)
+
 [中文版本](./README_zh.md)
 
 Alibaba Cloud Ops MCP Server is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides seamless integration with Alibaba Cloud APIs, enabling AI assistants to operation resources on Alibaba Cloud, supporting ECS, Cloud Monitor, OOS andother widely used cloud products.
