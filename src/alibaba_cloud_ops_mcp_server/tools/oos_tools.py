@@ -140,16 +140,19 @@ def OOS_RunInstances(
     SecurityGroupId: str = Field(description='SecurityGroup ID'),
     VSwitchId: str = Field(description='VSwitch ID'),
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
+    InternetMaxBandwidthOut: int = Field(description='The maximum outbound bandwidth of the instance. Unit: Mbit/s. Valid values: 0 to 100. If you want to open the public network for the ECS instance, you need to set a value > 0', default=0),
     Amount: int = Field(description='Number of ECS instances', default=1),
     InstanceName: str = Field(description='Instance Name', default='')
 ):
     """批量创建ECS实例，适用于需要同时创建多台ECS实例的场景，例如应用部署和高可用性场景。"""
 
     parameters = {
+        'regionId': RegionId,
         'imageId': ImageId,
         'instanceType': InstanceType,
         'securityGroupId': SecurityGroupId,
         'vSwitchId': VSwitchId,
+        'internetMaxBandwidthOut': InternetMaxBandwidthOut,
         'amount': Amount,
         'instanceName': InstanceName
     }
