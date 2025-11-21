@@ -54,7 +54,24 @@ def test_OOS_RebootInstances():
 @patch('alibaba_cloud_ops_mcp_server.tools.oos_tools.create_client', fake_client)
 def test_OOS_RunInstances():
     func = get_tool_func("OOS_RunInstances")
-    result = func(RegionId='cn-test', ImageId='img', InstanceType='ecs.t1', SecurityGroupId='sg', VSwitchId='vsw', InternetMaxBandwidthOut=0, Amount=1, InstanceName='test')
+    result = func(
+        RegionId='cn-test',
+        ImageId='img',
+        InstanceType='ecs.t1',
+        SecurityGroupId='sg',
+        VSwitchId='vsw',
+        InternetMaxBandwidthOut=0,
+        Amount=1,
+        InstanceName='test',
+        SystemDiskCategory='',
+        SystemDiskSize='',
+        SystemDiskName='',
+        SystemDiskDescription='',
+        SystemDiskPerformanceLevel='1',
+        PrivateIpAddress='102',
+        SystemDiskAutoSnapshotPolicyId='1',
+        DataDiskParameters='[]'
+    )
     assert hasattr(result, 'executions')
 
 @patch('alibaba_cloud_ops_mcp_server.tools.oos_tools.create_client', fake_client)
