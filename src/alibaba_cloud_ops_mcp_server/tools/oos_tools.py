@@ -142,7 +142,15 @@ def OOS_RunInstances(
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
     InternetMaxBandwidthOut: int = Field(description='The maximum outbound bandwidth of the instance. Unit: Mbit/s. Valid values: 0 to 100. If you want to open the public network for the ECS instance, you need to set a value > 0', default=0),
     Amount: int = Field(description='Number of ECS instances', default=1),
-    InstanceName: str = Field(description='Instance Name', default='')
+    InstanceName: str = Field(description='Instance Name', default=''),
+    SystemDiskCategory: str = Field(description='The category of the system disk. Valid values: cloud_efficiency, cloud_ssd, cloud_essd, cloud_auto, cloud, cloud_essd_entry', default='cloud_essd'),
+    SystemDiskSize: str = Field(description='The size of the system disk. Unit: GiB. Valid values: 20 to 500. Default value: 40 or the image size, whichever is greater', default=''),
+    SystemDiskName: str = Field(description='The name of the system disk', default=''),
+    SystemDiskDescription: str = Field(description='The description of the system disk', default=''),
+    SystemDiskPerformanceLevel: str = Field(description='The performance level of the ESSD used as the system disk. Valid values: PL0, PL1, PL2, PL3', default='PL1'),
+    PrivateIpAddress: str = Field(description='The private IP address of the instance. For VPC type ECS instances, the private IP address must be selected from the available IP range of the VSwitch', default=''),
+    SystemDiskAutoSnapshotPolicyId: str = Field(description='The ID of the automatic snapshot policy to apply to the system disk', default=''),
+    DataDiskParameters: str = Field(description='Data disk configuration in JSON format. Example: [{"Size":"100","DiskName":"data-disk-1","Description":"","Category":"cloud_essd","PerformanceLevel":"PL1","AutoSnapshotPolicyId":""}]', default='')
 ):
     """批量创建ECS实例，适用于需要同时创建多台ECS实例的场景，例如应用部署和高可用性场景。"""
 
@@ -156,6 +164,35 @@ def OOS_RunInstances(
         'amount': Amount,
         'instanceName': InstanceName
     }
+    
+    # 添加系统盘相关参数
+    if SystemDiskCategory:
+        parameters['systemDiskCategory'] = SystemDiskCategory
+    if SystemDiskSize:
+        parameters['systemDiskSize'] = SystemDiskSize
+    if SystemDiskName:
+        parameters['systemDiskName'] = SystemDiskName
+    if SystemDiskDescription:
+        parameters['systemDiskDescription'] = SystemDiskDescription
+    if SystemDiskPerformanceLevel:
+        parameters['systemDiskPerformanceLevel'] = SystemDiskPerformanceLevel
+    if PrivateIpAddress:
+        parameters['privateIpAddress'] = PrivateIpAddress
+    if SystemDiskAutoSnapshotPolicyId:
+        parameters['systemDiskAutoSnapshotPolicyId'] = SystemDiskAutoSnapshotPolicyId
+    
+    # 处理数据盘参数
+    if DataDiskParameters:
+        try:
+            # 解析 JSON 字符串为列表
+            data_disks = json.loads(DataDiskParameters) if isinstance(DataDiskParameters, str) else DataDiskParameters
+            if isinstance(data_disks, list) and len(data_disks) > 0:
+                # 将数据盘列表转换为 OOS 模板需要的格式
+                parameters['dataDiskParameters'] = data_disks
+        except (json.JSONDecodeError, TypeError) as e:
+            # 如果解析失败，忽略数据盘参数
+            pass
+    
     return _start_execution_sync(region_id=RegionId, template_name='ACS-ECS-RunInstances', parameters=parameters)
 
 
