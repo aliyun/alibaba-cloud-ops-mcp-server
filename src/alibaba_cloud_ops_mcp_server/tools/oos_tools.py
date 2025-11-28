@@ -150,7 +150,12 @@ def OOS_RunInstances(
     SystemDiskPerformanceLevel: str = Field(description='The performance level of the ESSD used as the system disk. Valid values: PL0, PL1, PL2, PL3', default='PL1'),
     PrivateIpAddress: str = Field(description='The private IP address of the instance. For VPC type ECS instances, the private IP address must be selected from the available IP range of the VSwitch', default=''),
     SystemDiskAutoSnapshotPolicyId: str = Field(description='The ID of the automatic snapshot policy to apply to the system disk', default=''),
-    DataDiskParameters: str = Field(description='Data disk configuration in JSON format. Example: [{"Size":"100","DiskName":"data-disk-1","Description":"","Category":"cloud_essd","PerformanceLevel":"PL1","AutoSnapshotPolicyId":""}]', default='')
+    DataDiskParameters: str = Field(description='Data disk configuration in JSON format. Example: [{"Size":"100","DiskName":"data-disk-1","Description":"","Category":"cloud_essd","PerformanceLevel":"PL1","AutoSnapshotPolicyId":""}]', default=''),
+    Tags: list = Field(description='The tag of an ECS instance, for example: [{"Key":"oos","Value":"test"}]', default=[]),
+    ResourceGroupId: str = Field(description='Resource group ID', default=''),
+    Description: str = Field(description='The description of the ECS instances', default=''),
+    HostName: str = Field(description='The host name of the ECS instance', default=''),
+    ZoneId: str = Field(description='The ID of the zone where the ECS instances are deployed', default=''),
 ):
     """批量创建ECS实例，适用于需要同时创建多台ECS实例的场景，例如应用部署和高可用性场景。"""
 
@@ -164,8 +169,7 @@ def OOS_RunInstances(
         'amount': Amount,
         'instanceName': InstanceName
     }
-    
-    # 添加系统盘相关参数
+
     if SystemDiskCategory:
         parameters['systemDiskCategory'] = SystemDiskCategory
     if SystemDiskSize:
@@ -180,17 +184,23 @@ def OOS_RunInstances(
         parameters['privateIpAddress'] = PrivateIpAddress
     if SystemDiskAutoSnapshotPolicyId:
         parameters['systemDiskAutoSnapshotPolicyId'] = SystemDiskAutoSnapshotPolicyId
-    
-    # 处理数据盘参数
+    if Tags:
+        parameters['tags'] = Tags
+    if ResourceGroupId:
+        parameters['resourceGroupId'] = ResourceGroupId
+    if Description:
+        parameters['description'] = Description
+    if HostName:
+        parameters['hostName'] = HostName
+    if ZoneId:
+        parameters['zoneId'] = ZoneId
+
     if DataDiskParameters:
         try:
-            # 解析 JSON 字符串为列表
             data_disks = json.loads(DataDiskParameters) if isinstance(DataDiskParameters, str) else DataDiskParameters
             if isinstance(data_disks, list) and len(data_disks) > 0:
-                # 将数据盘列表转换为 OOS 模板需要的格式
                 parameters['dataDiskParameters'] = data_disks
         except (json.JSONDecodeError, TypeError) as e:
-            # 如果解析失败，忽略数据盘参数
             pass
     
     return _start_execution_sync(region_id=RegionId, template_name='ACS-ECS-RunInstances', parameters=parameters)
