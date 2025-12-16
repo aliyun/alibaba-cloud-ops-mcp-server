@@ -3,6 +3,8 @@ from mcp.server.fastmcp import FastMCP, Context
 from pydantic import Field
 import logging
 import json
+import re
+from urllib.parse import quote
 
 import inspect
 import types
@@ -24,6 +26,10 @@ type_map = {
     'array': list,
     'object': dict,
     'number': float
+}
+
+SERVICE_ENDPOINT_MAPPING = {
+    'fc': 'fcv3'
 }
 
 REGION_ENDPOINT_SERVICE = ['ecs', 'oos', 'vpc', 'slb']
@@ -49,6 +55,9 @@ CENTRAL_SERVICE_ENDPOINTS = {
 
 def _get_service_endpoint(service: str, region_id: str):
     region_id = region_id.lower()
+    service = service.lower()
+
+    endpoint_service = SERVICE_ENDPOINT_MAPPING.get(service, service)
 
     # Prioritizing central service endpoints
     central = CENTRAL_SERVICE_ENDPOINTS.get(service)
@@ -62,20 +71,20 @@ def _get_service_endpoint(service: str, region_id: str):
 
     # Determine whether to use regional endpoints
     if service in REGION_ENDPOINT_SERVICE:
-        return f'{service}.{region_id}.aliyuncs.com'
+        return f'{endpoint_service}.{region_id}.aliyuncs.com'
 
     if service in DOUBLE_ENDPOINT_SERVICE:
         not_in_central = region_id not in DOUBLE_ENDPOINT_SERVICE[service]
         if not_in_central:
-            return f'{service}.{region_id}.aliyuncs.com'
+            return f'{endpoint_service}.{region_id}.aliyuncs.com'
         else:
-            return f'{service}.aliyuncs.com'
+            return f'{endpoint_service}.aliyuncs.com'
 
     if service in CENTRAL_SERVICE:
-        return f'{service}.aliyuncs.com'
+        return f'{endpoint_service}.aliyuncs.com'
 
     # Default
-    return f'{service}.{region_id}.aliyuncs.com'
+    return f'{endpoint_service}.{region_id}.aliyuncs.com'
 
 
 def create_client(service: str, region_id: str) -> OpenApiClient:
@@ -100,8 +109,9 @@ ECS_LIST_PARAMETERS = {
 def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
     service = service.lower()
     api_meta, _ = ApiMetaClient.get_api_meta(service, api)
+    print(f'api_meta: {api_meta}')
     version = ApiMetaClient.get_service_version(service)
-    method = 'POST' if api_meta.get('methods', [])[0] == 'post' else 'GET'
+    method = 'POST' if api_meta.get('methods', [])[0] == 'post' else api_meta.get('methods', [])[0].upper()
     path = api_meta.get('path', '/')
     style = ApiMetaClient.get_service_style(service)
     
@@ -113,25 +123,130 @@ def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
             if param_name in ECS_LIST_PARAMETERS and isinstance(param_value, list):
                 processed_parameters[param_name] = json.dumps(param_value)
     
-    req = open_api_models.OpenApiRequest(
-        query=OpenApiUtilClient.query(processed_parameters)
-    )
-    params = open_api_models.Params(
-        action=api,
-        version=version,
-        protocol='HTTPS',
-        pathname=path,
-        method=method,
-        auth_type='AK',
-        style=style,
-        req_body_type='formData',
-        body_type='json'
-    )
-    logger.info(f'Call API Request: Service: {service} API: {api} Method: {method} Parameters: {processed_parameters}')
+    # 判断是否为 RESTful API
+    is_restful = (style and style.upper() in ['RESTFUL', 'ROA'] ) or service in ['fc']
+    
+    if is_restful:
+        # RESTful API 处理：区分路径参数、查询参数和请求体参数
+        parameters_meta = api_meta.get('parameters', [])
+        path_params = {}
+        query_params = {}
+        body_params = {}
+        body_param_names = set()
+        
+        # 先找出所有 body 参数的名称
+        for param_meta in parameters_meta:
+            param_in = param_meta.get('in', '').lower()
+            if param_in == 'body':
+                param_name = param_meta.get('name')
+                if param_name:
+                    body_param_names.add(param_name)
+                # 检查 body 参数的 schema，可能包含嵌套的属性
+                schema = param_meta.get('schema', {})
+                if isinstance(schema, dict):
+                    properties = schema.get('properties', {})
+                    if properties:
+                        body_param_names.update(properties.keys())
+        
+        # 根据参数位置分类
+        for param_meta in parameters_meta:
+            param_name = param_meta.get('name')
+            param_in = param_meta.get('in', '').lower()
+            
+            if param_name in processed_parameters:
+                param_value = processed_parameters[param_name]
+                if param_in == 'path':
+                    path_params[param_name] = param_value
+                elif param_in == 'query':
+                    query_params[param_name] = param_value
+                elif param_in == 'body' or param_name in body_param_names:
+                    # body 参数或 body 中的嵌套属性
+                    body_params[param_name] = param_value
+        
+        # 替换路径中的参数占位符，支持 {paramName} 格式
+        pathname = path
+        for param_name, param_value in path_params.items():
+            # 支持多种占位符格式：{paramName}, {param_name}
+            # 使用正则表达式替换，不区分大小写
+            escaped_name = re.escape(param_name)
+            # 对路径参数值进行 URL 编码，保留路径分隔符 / 不被编码
+            # 这样可以正确处理路径参数，同时避免特殊字符导致 "Illegal Path Character" 错误
+            param_str = str(param_value)
+            # 对于路径参数，只编码特殊字符，保留 / 字符（如果参数值本身是路径的一部分）
+            encoded_value = quote(param_str, safe='/')
+            # 替换 {paramName} 格式（单花括号）
+            pathname = re.sub(rf'\{{{escaped_name}\}}', encoded_value, pathname, flags=re.IGNORECASE)
+            # 替换 {{paramName}} 格式（双重花括号，用于转义）
+            pathname = re.sub(rf'\{{{{2}}{escaped_name}\}}{2}', encoded_value, pathname, flags=re.IGNORECASE)
+        
+        # 确保路径以 / 开头
+        if not pathname.startswith('/'):
+            pathname = '/' + pathname
+        
+        # 获取请求体样式
+        body_style = ApiMetaClient.get_api_body_style(service, api)
+        req_body_type = body_style if body_style else 'json'
+        
+        # 构建请求体
+        body = None
+        if body_params:
+            if req_body_type == 'json':
+                # 对于 JSON 格式，直接序列化 body_params
+                body = json.dumps(body_params, ensure_ascii=False) if isinstance(body_params, dict) else body_params
+            elif req_body_type in ['formData', 'form']:
+                # 对于 formData 格式，使用 OpenApiUtilClient.query 处理
+                body = OpenApiUtilClient.query(body_params)
+            else:
+                body = body_params
+        
+        # 构建 OpenApiRequest
+        req = open_api_models.OpenApiRequest(
+            query=OpenApiUtilClient.query(query_params) if query_params else None,
+            body=body
+        )
+        
+        # ROA/RESTful API 配置
+        # 注意：根据阿里云 SDK 文档，ROA 风格的 API 可能需要 action 参数
+        # 但某些情况下 action 可以为 None，优先使用 pathname
+        params = open_api_models.Params(
+            action=api,  # ROA 风格 API 通常也需要 action
+            version=version,
+            protocol='HTTPS',
+            pathname=pathname,
+            method=method,
+            auth_type='AK',
+            style='ROA',
+            req_body_type=req_body_type,
+            body_type='string'
+        )
+        
+        logger.info(f'Call RESTful API Request: Service: {service} API: {api} Method: {method} Path: {pathname} Query: {query_params} Body: {body_params}')
+    else:
+        # RPC API 处理（原有逻辑）
+        req = open_api_models.OpenApiRequest(
+            query=OpenApiUtilClient.query(processed_parameters)
+        )
+        params = open_api_models.Params(
+            action=api,
+            version=version,
+            protocol='HTTPS',
+            pathname=path,
+            method=method,
+            auth_type='AK',
+            style=style,
+            req_body_type='formData',
+            body_type='json'
+        )
+        logger.info(f'Call RPC API Request: Service: {service} API: {api} Method: {method} Parameters: {processed_parameters}')
+    
     client = create_client(service, processed_parameters.get('RegionId', 'cn-hangzhou'))
     runtime = util_models.RuntimeOptions()
-    resp = client.call_api(params, req, runtime)
-    logger.info(f'Call API Response: {resp}')
+    try:
+        resp = client.call_api(params, req, runtime)
+        logger.info(f'Call API Response: {resp}')
+    except Exception as e:
+        resp = f'Call API Error: {e}'
+        logger.error(resp)
     return resp
 
 
