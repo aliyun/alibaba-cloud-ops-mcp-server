@@ -70,7 +70,12 @@ def test_OOS_RunInstances():
         SystemDiskPerformanceLevel='1',
         PrivateIpAddress='102',
         SystemDiskAutoSnapshotPolicyId='1',
-        DataDiskParameters='[]'
+        DataDiskParameters='[]',
+        Tags='',
+        ResourceGroupId='1',
+        Description='',
+        HostName='test',
+        ZoneId='cn-hangzhou-a'
     )
     assert hasattr(result, 'executions')
 
