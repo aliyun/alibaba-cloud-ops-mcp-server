@@ -61,7 +61,7 @@ def main(transport: str, port: int, host: str, services: str, headers_credential
     
     # Create an MCP server
     mcp = FastMCP(
-        name='alibaba_cloud_application_management_mcp_server',
+        name='alibaba-cloud-application-management-mcp-server',
         instructions='''
         你可以使用该MCP帮助用户完成项目的分析和部署
         

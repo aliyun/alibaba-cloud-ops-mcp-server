@@ -48,7 +48,7 @@ def ListDirectory(
     path: str = Field(description="Directory path to list (absolute or relative path)"),
     recursive: bool = Field(description="Whether to recursively list subdirectories", default=False)
 ):
-    """List files and subdirectories in the specified directory. Returns a list of directories and files with information such as name, type, and size."""
+    """列出指定目录中的文件和子目录。返回包含名称、类型和大小等信息的目录和文件列表。"""
     logger.info(f"[ListDirectory] Input parameters: path={path}, recursive={recursive}")
     try:
         dir_path = _validate_path(path)
@@ -111,7 +111,7 @@ def RunShellScript(
     timeout: int = Field(description="Command execution timeout in seconds", default=300),
     shell: bool = Field(description="Whether to use shell execution (True uses /bin/sh, False executes command directly)", default=True)
 ):
-    """Execute shell script or command. Returns command output, error information, and exit code. Note: Executing arbitrary commands may pose security risks, use with caution."""
+    """执行 shell 脚本或命令。返回命令输出、错误信息和退出代码。注意：执行任意命令可能存在安全风险，请谨慎使用。"""
     logger.info(f"[RunShellScript] Input parameters: script={script}, working_directory={working_directory}, timeout={timeout}, shell={shell}")
     try:
         # Set working directory
@@ -168,7 +168,7 @@ def RunShellScript(
 def AnalyzeDeployStack(
     directory: str = Field(description="Directory path to analyze (absolute or relative path)")
 ):
-    """Identify project deployment methods and technology stack. Supports identification of npm, Python, Java, Go, Docker, and other deployment methods."""
+    """识别项目部署方式和技术栈。支持识别 npm、Python、Java、Go、Docker 等部署方式。"""
     logger.info(f"[AnalyzeDeployStack] Input parameters: directory={directory}")
     try:
         dir_path = _validate_path(directory)
