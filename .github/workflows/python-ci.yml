@@ -25,4 +25,4 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          uv run pytest --cov=src --cov-report=term-missing 
+          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server/src --cov-report=term-missing 
