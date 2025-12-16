@@ -71,13 +71,13 @@ ECS_LIST_PARAMETERS = {
 def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
     service = service.lower()
 
-    # api_meta, _ = ApiMetaClient.get_api_meta(service, api)
-    # version = ApiMetaClient.get_service_version(service)
-    # method = 'POST' if api_meta.get('methods', [])[0] == 'post' else 'GET'
-    api_meta = {}
-    method = 'POST'
-    version = '2019-06-01'
-
+    try:
+        api_meta, _ = ApiMetaClient.get_api_meta(service, api)
+    except Exception as e:
+        logger.error(f'Get API Meta Error: {e}')
+        api_meta = {}
+    version = ApiMetaClient.get_service_version(service)
+    method = 'POST' if api_meta.get('methods', ['post'])[0] == 'post' else 'GET'
     path = api_meta.get('path', '/')
     style = ApiMetaClient.get_service_style(service)
     
