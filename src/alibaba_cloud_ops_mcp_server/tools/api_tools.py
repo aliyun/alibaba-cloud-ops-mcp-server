@@ -41,13 +41,54 @@ DOUBLE_ENDPOINT_SERVICE = {
     'r-kvstore': ['cn-qingdao', 'cn-beijing', 'cn-wulanchabu', 'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-heyuan']
 }
 
-CENTRAL_SERVICE = ['cbn', 'ros', 'ram']
+CENTRAL_SERVICE = ['cbn', 'ros', 'ram', 'resourcecenter']
+
+
+DOMESTIC_ENDPOINT = 'DomesticEndpoint'
+DOMESTIC_REGION = 'DomesticRegion'
+INTERNATIONAL_ENDPOINT = 'InternationalEndpoint'
 
 CENTRAL_SERVICE_ENDPOINTS = {
     'bssopenapi': {
-        'DomesticEndpoint': 'business.aliyuncs.com',
-        'InternationalEndpoint': 'business.ap-southeast-1.aliyuncs.com',
-        'DomesticRegion': ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+        DOMESTIC_ENDPOINT: 'business.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'business.ap-southeast-1.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'computenest': {
+        DOMESTIC_ENDPOINT: 'computenest.cn-hangzhou.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'computenest.ap-southeast-1.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'computenestsupplier': {
+        DOMESTIC_ENDPOINT: 'computenestsupplier.cn-hangzhou.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'computenestsupplier.ap-southeast-1.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'resourcecenter': {
+        DOMESTIC_ENDPOINT: 'resourcecenter.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'resourcecenter-intl.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'resourcemanager': {
+        DOMESTIC_ENDPOINT: 'resourcemanager.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'resourcemanager-intl.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'eds-user': {
+        DOMESTIC_ENDPOINT: 'eds-user.cn-shanghai.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'eds-user.ap-southeast-1.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
+                           'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
+    },
+    'cloudfw': {
+        DOMESTIC_ENDPOINT: 'cloudfw.aliyuncs.com',
+        INTERNATIONAL_ENDPOINT: 'cloudfw.ap-southeast-1.aliyuncs.com',
+        DOMESTIC_REGION: ['cn-qingdao', 'cn-beijing', 'cn-zhangjiakou', 'cn-huhehaote', 'cn-wulanchabu',
                            'cn-hangzhou', 'cn-shanghai', 'cn-shenzhen', 'cn-chengdu', 'cn-hongkong']
     }
 }
@@ -91,6 +132,9 @@ def create_client(service: str, region_id: str) -> OpenApiClient:
     config = create_config()
     if isinstance(service, str):
         service = service.lower()
+        # 通过代理访问的云产品
+        if service in ['rdc-inner', 'ecs', 'devops-inner', 'ess', 'webhosting', 'slb', 'ecd', 'tag']:
+            config.protocol = 'http'
     endpoint = _get_service_endpoint(service, region_id.lower())
     config.endpoint = endpoint
     logger.info(f'Service Endpoint: {endpoint}')
