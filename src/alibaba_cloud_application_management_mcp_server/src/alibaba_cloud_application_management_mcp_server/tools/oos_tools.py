@@ -65,7 +65,7 @@ def _start_execution_async(region_id: str, template_name: str, parameters: dict)
 
 
 @tools.append
-def InstallDeploymentEnvironment(
+def InstallDeployEnvironment(
         PackageName: str = Field(description='OOS Package Name, like: Java, Python, ...'),
         InstanceIds: List[str] = Field(description='AlibabaCloud ECS instance ID List', default=None),
         RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),

@@ -154,7 +154,7 @@ wheels = [
 ]
 
 [[package]]
-name = "alibaba-cloud-appliction-management-mcp-server"
+name = "alibaba-cloud-application-management-mcp-server"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

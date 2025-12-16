@@ -273,7 +273,7 @@ def GetLastDeploymentInfo(
         random_string: Optional[str] = Field(default=None, description='')
 ):
     """
-    Retrieve information about the application deployed last time (read from the .application.json file).
+    获取上次部署的应用信息
     """
     logger.info("[GetLastDeploymentInfo] Reading last deployment info")
     info = load_application_info()
@@ -298,7 +298,7 @@ def GetDeployStatus(
         application_group_name: str = Field(description='name of the application group'),
 ):
     """
-    Traversing pipeline states
+    查询应用分组的部署状态
     """
     logger.info(f"[GetDeployStatus] Input parameters: name={name}, application_group_name={application_group_name}")
     client = create_client(region_id=APPLICATION_MANAGEMENT_REGION_ID)
