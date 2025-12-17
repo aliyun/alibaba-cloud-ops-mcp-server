@@ -455,7 +455,7 @@ def _check_application_group_exists(client: oos20190601Client, application_name:
 
 
 def _create_deploy_parameters(name, application_group_name, region_id_oss, bucket_name, object_name, version_id,
-                              is_internal_oss, port, instance_ids, application_start, application_stop):
+                              is_internal_oss, port, instance_ids, application_start, application_stop, deploy_language):
     """
     Create deployment parameters
     """
@@ -484,7 +484,6 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
             "PackageName": "ACS-Extension-DockerCE-1853370294850618"
         },
         "TemplateName": "Sample",
-        "ServiceVersion": "beta",
         "ServiceId": "service-561c4b4e45c74dcaa741"
     }
 
