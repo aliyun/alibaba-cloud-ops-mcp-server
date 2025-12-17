@@ -4,7 +4,7 @@ import logging
 
 from alibaba_cloud_ops_mcp_server.tools.common_api_tools import set_custom_service_list
 from alibaba_cloud_ops_mcp_server.config import config
-from alibaba_cloud_ops_mcp_server.tools import cms_tools, oos_tools, oss_tools, api_tools, common_api_tools
+from alibaba_cloud_ops_mcp_server.tools import cms_tools, oos_tools, oss_tools, api_tools, common_api_tools, other_tools
 from alibaba_cloud_ops_mcp_server.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -79,12 +79,15 @@ def main(transport: str, port: int, host: str, services: str, headers_credential
         set_custom_service_list(service_list)
         for tool in common_api_tools.tools:
             mcp.tool(tool)
+    for tool in other_tools.tools:
+        mcp.tool(tool)
     for tool in oos_tools.tools:
         mcp.tool(tool)
     for tool in cms_tools.tools:
         mcp.tool(tool)
     for tool in oss_tools.tools:
         mcp.tool(tool)
+
     api_tools.create_api_tools(mcp, config)
 
     # Initialize and run the server

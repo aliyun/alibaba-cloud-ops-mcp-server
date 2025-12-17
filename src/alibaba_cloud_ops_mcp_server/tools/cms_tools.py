@@ -39,6 +39,7 @@ def _get_cms_metric_data(region_id: str, instance_ids: List[str], metric_name: s
     logger.info(f'CMS Tools response: {describe_metric_last_resp.body}')
     return describe_metric_last_resp.body.datapoints
 
+
 @tools.append
 def CMS_GetCpuUsageData(
     InstanceIds: List[str] = Field(description='AlibabaCloud ECS instance ID List'),
