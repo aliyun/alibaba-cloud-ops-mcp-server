@@ -65,9 +65,10 @@ def CodeDeploy(
                         'executable or script in the extracted artifact to avoid deployment '
                         'failures.'),
         application_stop: str = Field(description='Application stop command script'),
+        deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
         instance_ids: list = Field(description='AlibabaCloud ECS instance ID List. If empty or not provided, user '
-                                               'will be prompted to create ECS instances.', default=None)
+                                               'will be prompted to create ECS instances.', default=None),
 ):
     """
     通过应用管理 API 部署应用到 ECS 实例。
@@ -76,7 +77,7 @@ def CodeDeploy(
 
     步骤 1：识别部署方式
     - 通过本地文件操作工具读取项目文件（package.json、requirements.txt、pom.xml 等）
-    - 识别项目的部署方式和技术栈（npm、python、java、go 等）
+    - 识别项目的部署方式和技术栈（npm、python、java、go 等）,项目的部署语言可以作为参数：deploy_language 传入
     - 生成构建命令，注意，该构建命令不需要生成构建脚本，不要因此新增sh文件，任何情况下都不要，因为构建命令是CodeDeploy的参数，不需要生成文件
 
     步骤 2：构建或压缩文件，并记录文件路径
@@ -211,7 +212,7 @@ def CodeDeploy(
                                                        deploy_region_id, region_id_oss, bucket_name,
                                                        object_name, version_id, is_internal_oss,
                                                        port, instance_ids, application_start,
-                                                       application_stop)
+                                                       application_stop, deploy_language)
     else:
         deploy_request = _handle_existing_application_group(client, name, application_group_name,
                                                             deploy_region_id, region_id_oss, bucket_name,
@@ -310,7 +311,7 @@ def GetDeployStatus(
 def _handle_new_application_group(client, name, application_group_name, deploy_region_id,
                                   region_id_oss, bucket_name, object_name, version_id,
                                   is_internal_oss, port, instance_ids, application_start,
-                                  application_stop):
+                                  application_stop, deploy_language):
     logger.info(f"[code_deploy] Application group '{application_group_name}' does not exist, creating it...")
     create_application_group_request = oos_20190601_models.CreateApplicationGroupRequest(
         region_id=APPLICATION_MANAGEMENT_REGION_ID,
@@ -327,7 +328,7 @@ def _handle_new_application_group(client, name, application_group_name, deploy_r
     deploy_parameters = _create_deploy_parameters(
         name, application_group_name, region_id_oss, bucket_name,
         object_name, version_id, is_internal_oss, port, instance_ids,
-        application_start, application_stop
+        application_start, application_stop, deploy_language
     )
 
     return oos_20190601_models.DeployApplicationGroupRequest(
@@ -459,6 +460,17 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
     """
     Create deployment parameters
     """
+    PACKAGE_MAP = {
+        'docker': 'ACS-Extension-DockerCE-1853370294850618',
+        'java': 'ACS-Extension-java-1853370294850618',
+        'python': 'ACS-Extension-python-1853370294850618',
+        'nodejs': 'ACS-Extension-node-1853370294850618',
+        'golang': 'ACS-Extension-golang-1853370294850618',
+        'nginx': 'ACS-Extension-nginx-1853370294850618',
+        'git': 'ACS-Extension-Git-1853370294850618',
+    }
+    package_name = PACKAGE_MAP.get(deploy_language, PACKAGE_MAP['docker'])
+
     return {
         "Parameters": {
             "CreateEcsOption": "ExistECS" if instance_ids else "NewECS",
@@ -477,9 +489,8 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
             "WorkingDir": "/root",
             "ApplicationStart": application_start,
             "ApplicationStop": application_stop,
-            "PackageName": "ACS-Extension-DockerCE-1853370294850618"
+            "PackageName": package_name
         },
-        "TemplateName": "OSS",
         "ServiceId": "service-561c4b4e45c74dcaa741"
     }
 

@@ -121,8 +121,6 @@ def main(transport: str, port: int, host: str, services: str, headers_credential
     )
     if headers_credential_only:
         settings.headers_credential_only = headers_credential_only
-    for tool in oos_tools.tools:
-        mcp.tool(tool)
     for tool in oss_tools.tools:
         mcp.tool(tool)
     for tool in local_tools.tools:

@@ -155,19 +155,10 @@ wheels = [
 
 [[package]]
 name = "alibaba-cloud-application-management-mcp-server"
-version = "0.1.0"
+version = "1.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "alibaba-cloud-ops-mcp-server" },
-    { name = "alibabacloud-cms20190101" },
-    { name = "alibabacloud-credentials" },
-    { name = "alibabacloud-credentials-api" },
-    { name = "alibabacloud-ecs20140526" },
-    { name = "alibabacloud-oos20190601" },
-    { name = "alibabacloud-oss-v2" },
-    { name = "click" },
-    { name = "fastmcp" },
-    { name = "pydantic" },
 ]
 
 [package.dev-dependencies]
@@ -177,18 +168,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "alibaba-cloud-ops-mcp-server" },
-    { name = "alibabacloud-cms20190101", specifier = ">=3.1.4" },
-    { name = "alibabacloud-credentials", specifier = ">=1.0.3" },
-    { name = "alibabacloud-credentials-api", specifier = "==1.0.1" },
-    { name = "alibabacloud-ecs20140526", specifier = ">=6.1.0" },
-    { name = "alibabacloud-oos20190601", specifier = ">=3.5.0" },
-    { name = "alibabacloud-oss-v2", specifier = ">=1.1.0" },
-    { name = "click", specifier = ">=8.1.8" },
-    { name = "fastmcp", specifier = "==2.8.0" },
-    { name = "pydantic", specifier = "==2.11.3" },
-]
+requires-dist = [{ name = "alibaba-cloud-ops-mcp-server" }]
 
 [package.metadata.requires-dev]
 dev = [
