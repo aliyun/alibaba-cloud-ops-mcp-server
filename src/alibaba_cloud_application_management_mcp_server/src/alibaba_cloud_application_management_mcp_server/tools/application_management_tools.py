@@ -459,8 +459,6 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
     """
     Create deployment parameters
     """
-    repo_name = re.sub(r'[^a-z0-9-]', '-', name.lower())
-
     return {
         "Parameters": {
             "CreateEcsOption": "ExistECS" if instance_ids else "NewECS",
@@ -469,7 +467,6 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
             "Description": "",
             "ZoneId": "cn-hangzhou-b",
             "Port": port,
-            "RepoName": repo_name,
             "RevisionType": "Oss",
             "RegionIdOSS": region_id_oss,
             "BucketName": bucket_name,
@@ -480,10 +477,9 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
             "WorkingDir": "/root",
             "ApplicationStart": application_start,
             "ApplicationStop": application_stop,
-            "ArtifactSourceType": "others",
             "PackageName": "ACS-Extension-DockerCE-1853370294850618"
         },
-        "TemplateName": "Sample",
+        "TemplateName": "OSS",
         "ServiceId": "service-561c4b4e45c74dcaa741"
     }
 
