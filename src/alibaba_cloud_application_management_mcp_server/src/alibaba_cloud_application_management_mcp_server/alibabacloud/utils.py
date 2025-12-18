@@ -12,10 +12,38 @@ import alibabacloud_oss_v2 as oss
 
 logger = logging.getLogger(__name__)
 
-# Deployment configuration directory and file path - Use the user's home directory as a unified path
-# Windows: C:\Users\<username>\.code_deploy
-# Linux/Mac: ~/.code_deploy
-CODE_DEPLOY_BASE_DIR = Path.home() / '.code_deploy'
+# Global variable to store the project path
+_project_path: Optional[Path] = None
+
+def set_project_path(project_path: Optional[str] = None):
+    """
+    Set the project root path for code deployment.
+    This determines where the .code_deploy directory will be created.
+    
+    Args:
+        project_path: The root path of the project. If None, will use current working directory.
+    """
+    global _project_path
+    if project_path:
+        _project_path = Path(project_path).resolve()
+        logger.info(f"[set_project_path] Project path set to: {_project_path}")
+    else:
+        _project_path = None
+        logger.info(f"[set_project_path] Project path reset to None, will use current working directory")
+
+
+def _get_code_deploy_base_dir() -> Path:
+    """
+    Get the .code_deploy base directory in the project root directory.
+    This ensures each project has its own isolated deployment configuration.
+    
+    If project_path is set, use it. Otherwise, use current working directory.
+    """
+    if _project_path is not None:
+        return _project_path / '.code_deploy'
+    return Path.cwd() / '.code_deploy'
+
+CODE_DEPLOY_BASE_DIR = _get_code_deploy_base_dir()
 CODE_DEPLOY_DIR = CODE_DEPLOY_BASE_DIR
 RELEASE_DIR = CODE_DEPLOY_DIR / 'release'
 APPLICATION_JSON_FILE = CODE_DEPLOY_DIR / 'application.json'
@@ -23,10 +51,11 @@ APPLICATION_JSON_FILE = CODE_DEPLOY_DIR / 'application.json'
 
 def ensure_code_deploy_dirs():
     """
-    Ensure that the .code_deploy and release directories exist (in the user's home directory)
+    Ensure that the .code_deploy and release directories exist (in the project root directory)
     """
-    code_deploy_dir = CODE_DEPLOY_DIR
-    release_dir = RELEASE_DIR
+    # Recalculate paths to ensure we use the current working directory
+    code_deploy_dir = _get_code_deploy_base_dir()
+    release_dir = code_deploy_dir / 'release'
 
     code_deploy_dir.mkdir(parents=True, exist_ok=True)
     release_dir.mkdir(parents=True, exist_ok=True)
@@ -37,9 +66,9 @@ def ensure_code_deploy_dirs():
 def load_application_info() -> Dict[str, Any]:
     """
     Load deployment information from the .application.json file
-    (from the .code_deploy directory under the user's home directory)
+    (from the .code_deploy directory under the project root directory)
     """
-    json_file = APPLICATION_JSON_FILE
+    json_file = _get_code_deploy_base_dir() / 'application.json'
 
     if json_file.exists():
         try:
@@ -54,9 +83,9 @@ def load_application_info() -> Dict[str, Any]:
 def save_application_info(info: Dict[str, Any]):
     """
     Save deployment information to the .application.json file
-    (save it to the .code_deploy directory under the user's home directory)
+    (save it to the .code_deploy directory under the project root directory)
     """
-    json_file = APPLICATION_JSON_FILE
+    json_file = _get_code_deploy_base_dir() / 'application.json'
 
     try:
         json_file.parent.mkdir(parents=True, exist_ok=True)
@@ -74,9 +103,9 @@ def save_application_info(info: Dict[str, Any]):
 def get_release_path(filename: str) -> Path:
     """
     Get the file path in the release directory
-    (the .code_deploy/release directory under the user's home directory)
+    (the .code_deploy/release directory under the project root directory)
     """
-    release_dir = RELEASE_DIR
+    release_dir = _get_code_deploy_base_dir() / 'release'
     release_dir.mkdir(parents=True, exist_ok=True)
     return release_dir / filename
 

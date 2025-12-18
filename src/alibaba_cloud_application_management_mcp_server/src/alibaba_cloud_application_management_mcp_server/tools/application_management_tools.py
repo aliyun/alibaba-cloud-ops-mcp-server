@@ -5,12 +5,13 @@ from alibaba_cloud_application_management_mcp_server.tools.api_tools import _too
 from pathlib import Path
 
 from pydantic import Field
-from typing import Optional
+from typing import Optional, Tuple
 import json
 import time
 from alibabacloud_oos20190601.client import Client as oos20190601Client
 from alibabacloud_oos20190601 import models as oos_20190601_models
 from alibabacloud_ecs20140526 import models as ecs_20140526_models
+from alibabacloud_ecs20140526.client import Client as ecs20140526Client
 from alibaba_cloud_application_management_mcp_server.tools import oss_tools
 from alibaba_cloud_application_management_mcp_server.alibabacloud.utils import (
     ensure_code_deploy_dirs,
@@ -22,6 +23,7 @@ from alibaba_cloud_application_management_mcp_server.alibabacloud.utils import (
     put_bucket_tagging,
     find_bucket_by_tag,
     get_or_create_bucket_for_code_deploy,
+    set_project_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,8 +69,13 @@ def CodeDeploy(
         application_stop: str = Field(description='Application stop command script'),
         deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
+        project_path: Optional[str] = Field(description='Root path of the project. The .code_deploy '
+                                                                       'directory will be created in this path. '
+                                                                       'If not provided, will try to infer from file_path '
+                                                                       'or use current working directory.'),
         instance_ids: list = Field(description='AlibabaCloud ECS instance ID List. If empty or not provided, user '
-                                               'will be prompted to create ECS instances.', default=None),
+                                               'will be prompted to create ECS instances.', default=None)
+
 ):
     """
     通过应用管理 API 部署应用到 ECS 实例。
@@ -110,10 +117,45 @@ def CodeDeploy(
        说明：使用 nohup 命令可以让程序在后台运行，即使终端关闭也不会终止；> 重定向标准输出到日志文件；2>&1 将标准错误也重定向到同一文件；& 符号让命令在后台执行。
     4. 应用和应用分组会自动检查是否存在，如果存在则跳过创建，避免重复创建错误。
     5. 如果未提供 ECS 实例 ID，工具会返回提示信息，引导用户到 ECS 控制台创建实例。
-    6. 部署完成后，部署信息会保存到 .code_deploy/.application.json 文件中。
+    6. 部署完成后，部署信息会保存到项目根目录下的 .code_deploy/.application.json 文件中。
+    7. project_path 参数用于指定项目根目录，.code_deploy 目录将在此路径下创建。如果不提供，将尝试从 file_path 推断或使用当前工作目录。
 
     创建完成后，你应该以markdown的形式向用户展示你获取的service link，方便用户跳转
     """
+    # Set project path if provided
+    if project_path:
+        set_project_path(project_path)
+        logger.info(f"[code_deploy] Project path set to: {project_path}")
+    else:
+        # Try to infer project path from file_path
+        file_path_obj = Path(file_path)
+        if not file_path_obj.is_absolute():
+            file_path_obj = Path.cwd() / file_path_obj
+        file_path_resolved = file_path_obj.resolve()
+        
+        # Try to find project root by looking for common project files
+        current_dir = file_path_resolved.parent
+        project_root = None
+        project_indicators = ['package.json', 'pom.xml', 'requirements.txt', 'go.mod', 'Cargo.toml', '.git']
+        
+        # Search up to 5 levels for project root
+        for _ in range(5):
+            if any((current_dir / indicator).exists() for indicator in project_indicators):
+                project_root = current_dir
+                break
+            parent = current_dir.parent
+            if parent == current_dir:  # Reached filesystem root
+                break
+            current_dir = parent
+        
+        if project_root:
+            set_project_path(str(project_root))
+            logger.info(f"[code_deploy] Inferred project path from file_path: {project_root}")
+        else:
+            # Use the directory containing the file as project root
+            set_project_path(str(file_path_resolved.parent))
+            logger.info(f"[code_deploy] Using file directory as project path: {file_path_resolved.parent}")
+    
     # Check ECS instance ID
     if not instance_ids or len(instance_ids) == 0:
         ecs_purchase_link = f'https://ecs-buy.aliyun.com/ecs#/custom/prepay/{deploy_region_id}?orderSource=buyWizard-console-list'
@@ -144,6 +186,35 @@ def CodeDeploy(
                 - Port range: {port}/{port} (if port is specified)
                 - Protocol type: TCP
                 - Authorized object: 0.0.0.0/0 (or restrict access source as needed)
+            '''
+        }
+    
+    # 校验 ECS 实例是否存在
+    logger.info(f"[code_deploy] Validating ECS instances: {instance_ids}")
+    all_exist, missing_instance_ids = _check_ecs_instances_exist(deploy_region_id, instance_ids)
+    if not all_exist:
+        return {
+            'error': 'ECS_INSTANCE_NOT_FOUND',
+            'message': f'Some ECS instances do not exist in region {deploy_region_id}.',
+            'region_id': deploy_region_id,
+            'missing_instance_ids': missing_instance_ids,
+            'provided_instance_ids': instance_ids,
+            'instructions': f'''
+                ## ECS Instance Validation Failed
+                
+                **Deployment Region**: {deploy_region_id}
+                
+                **Missing Instance IDs**: {', '.join(missing_instance_ids)}
+                
+                **All Provided Instance IDs**: {', '.join(instance_ids)}
+                
+                Please verify that:
+                1. The instance IDs are correct
+                2. The instances exist in region {deploy_region_id}
+                3. You have permission to access these instances
+                
+                You can check your instances at:
+                https://ecs.console.aliyun.com/?regionId={deploy_region_id}#/server/instance
             '''
         }
 
@@ -214,10 +285,10 @@ def CodeDeploy(
                                                        port, instance_ids, application_start,
                                                        application_stop, deploy_language)
     else:
-        deploy_request = _handle_existing_application_group(client, name, application_group_name,
+        deploy_request = _handle_existing_application_group(name, application_group_name,
                                                             deploy_region_id, region_id_oss, bucket_name,
                                                             object_name, version_id, application_start,
-                                                            application_stop)
+                                                            application_stop, instance_ids)
 
     response = client.deploy_application_group(deploy_request)
     logger.info(f"[code_deploy] Response: {json.dumps(str(response), ensure_ascii=False)}")
@@ -322,8 +393,8 @@ def _handle_new_application_group(client, name, application_group_name, deploy_r
     client.create_application_group(create_application_group_request)
     logger.info(f"[code_deploy] Application group '{application_group_name}' created successfully")
 
-    if len(instance_ids) > 1:
-        _tag_multiple_instances(deploy_region_id, name, application_group_name, instance_ids)
+    # 确保所有实例都打上 tag（包括第一个实例）
+    _ensure_instances_tagged(deploy_region_id, name, application_group_name, instance_ids)
 
     deploy_parameters = _create_deploy_parameters(
         name, application_group_name, region_id_oss, bucket_name,
@@ -340,8 +411,11 @@ def _handle_new_application_group(client, name, application_group_name, deploy_r
 
 
 def _handle_existing_application_group(name, application_group_name, deploy_region_id, region_id_oss, bucket_name,
-                                       object_name, version_id, application_start, application_stop):
+                                       object_name, version_id, application_start, application_stop, instance_ids):
     logger.info(f"[code_deploy] Application group '{application_group_name}' already exists, skipping creation")
+    
+    # 确保所有实例都打上 tag（应用分组已存在的情况）
+    _ensure_instances_tagged(deploy_region_id, name, application_group_name, instance_ids)
 
     location_hooks = _create_location_and_hooks(
         region_id_oss, bucket_name, object_name, version_id,
@@ -389,19 +463,158 @@ def _handle_existing_application_group(name, application_group_name, deploy_regi
     )
 
 
-def _tag_multiple_instances(deploy_region_id, name, application_group_name, instance_ids):
-    remaining_instance_ids = instance_ids[1:]
+def _describe_instances_with_retry(deploy_region_id: str, describe_instances_request):
+    """
+    带重试逻辑的 describe_instances 调用
+    处理 UnretryableException 和 "Bad file descriptor" 错误，最多重试3次
+    
+    Args:
+        deploy_region_id: 部署区域ID
+        describe_instances_request: DescribeInstancesRequest 对象
+    
+    Returns:
+        describe_instances 的响应对象
+    
+    Raises:
+        如果所有重试都失败，抛出最后一次的异常
+    """
+    max_retries = 3
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        try:
+            ecs_client = create_ecs_client(region_id=deploy_region_id)
+            response = ecs_client.describe_instances(describe_instances_request)
+            return response
+        except Exception as e:
+            last_exception = e
+            error_msg = str(e)
+            error_type = type(e).__name__
+            # 检查是否是 UnretryableException 且包含 "Bad file descriptor"
+            is_unretryable = 'UnretryableException' in error_type or 'UnretryableException' in error_msg
+            has_bad_fd = 'Bad file descriptor' in error_msg or 'bad file descriptor' in error_msg.lower()
+            
+            if is_unretryable and has_bad_fd and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 1  # 递增等待时间：1秒、2秒、3秒
+                logger.warning(f"[_describe_instances_with_retry] UnretryableException with Bad file descriptor (attempt {attempt + 1}/{max_retries}), retrying after {wait_time}s: {e}")
+                time.sleep(wait_time)
+            else:
+                # 如果不是可重试的错误，或者已经重试了3次，直接抛出异常
+                logger.error(f"[_describe_instances_with_retry] Error calling describe_instances: {e}")
+                raise
+    
+    # 如果所有重试都失败了，抛出最后一次的异常
+    if last_exception:
+        logger.error(f"[_describe_instances_with_retry] All retries failed, raising last exception: {last_exception}")
+        raise last_exception
+
+
+def _check_ecs_instances_exist(deploy_region_id: str, instance_ids: list) -> Tuple[bool, list]:
+    """
+    检查 ECS 实例是否存在
+    
+    Returns:
+        (all_exist, missing_instance_ids): 如果所有实例都存在返回 (True, [])，否则返回 (False, [缺失的实例ID列表])
+    """
+    if not instance_ids:
+        return True, []
+    
+    describe_instances_request = ecs_20140526_models.DescribeInstancesRequest(
+        region_id=deploy_region_id,
+        instance_ids=json.dumps(instance_ids)
+    )
+    
+    response = _describe_instances_with_retry(deploy_region_id, describe_instances_request)
+    
+    existing_instance_ids = set()
+    if response.body and response.body.instances:
+        for instance in response.body.instances.instance:
+            if instance.instance_id:
+                existing_instance_ids.add(instance.instance_id)
+    
+    missing_instance_ids = [inst_id for inst_id in instance_ids if inst_id not in existing_instance_ids]
+    
+    if missing_instance_ids:
+        logger.warning(f"[_check_ecs_instances_exist] Missing instances: {missing_instance_ids}")
+        return False, missing_instance_ids
+    else:
+        logger.info(f"[_check_ecs_instances_exist] All instances exist: {instance_ids}")
+        return True, []
+
+
+def _check_instance_has_tag(deploy_region_id: str, instance_id: str, tag_key: str, tag_value: str) -> bool:
+    """
+    检查 ECS 实例是否已经有指定的 tag
+    
+    Returns:
+        bool: 如果实例已经有指定的 tag 返回 True，否则返回 False
+    """
+    describe_instances_request = ecs_20140526_models.DescribeInstancesRequest(
+        region_id=deploy_region_id,
+        instance_ids=json.dumps([instance_id])
+    )
+    
+    try:
+        response = _describe_instances_with_retry(deploy_region_id, describe_instances_request)
+        if response.body and response.body.instances and response.body.instances.instance:
+            instance = response.body.instances.instance[0]
+            if instance.tags and instance.tags.tag:
+                for tag in instance.tags.tag:
+                    if tag.tag_key == tag_key and tag.tag_value == tag_value:
+                        logger.info(f"[_check_instance_has_tag] Instance {instance_id} already has tag {tag_key}={tag_value}")
+                        return True
+        logger.info(f"[_check_instance_has_tag] Instance {instance_id} does not have tag {tag_key}={tag_value}")
+        return False
+    except Exception as e:
+        # 如果查询失败，假设没有 tag，继续打 tag
+        logger.warning(f"[_check_instance_has_tag] Error checking tag for instance {instance_id}: {e}")
+        return False
+
+
+def _ensure_instances_tagged(deploy_region_id: str, name: str, application_group_name: str, instance_ids: list):
+    """
+    确保所有 ECS 实例都打上了指定的 tag
+    如果实例没有 tag，则为其打上 tag
+    """
+    if not instance_ids:
+        return
+    
+    tag_key = f'app-{name}'
+    tag_value = application_group_name
+    
+    # 找出需要打 tag 的实例
+    instances_to_tag = []
+    for instance_id in instance_ids:
+        if not _check_instance_has_tag(deploy_region_id, instance_id, tag_key, tag_value):
+            instances_to_tag.append(instance_id)
+    
+    if not instances_to_tag:
+        logger.info(f"[_ensure_instances_tagged] All instances already have tag {tag_key}={tag_value}")
+        return
+    
+    # 为需要打 tag 的实例打 tag
+    logger.info(f"[_ensure_instances_tagged] Tagging instances: {instances_to_tag}")
     ecs_client = create_ecs_client(region_id=deploy_region_id)
     tag_resources_request = ecs_20140526_models.TagResourcesRequest(
         region_id=deploy_region_id,
         resource_type='Instance',
-        resource_id=remaining_instance_ids,
+        resource_id=instances_to_tag,
         tag=[ecs_20140526_models.TagResourcesRequestTag(
-            key=f'app-{name}',
-            value=application_group_name
+            key=tag_key,
+            value=tag_value
         )]
     )
     ecs_client.tag_resources(tag_resources_request)
+    logger.info(f"[_ensure_instances_tagged] Successfully tagged instances: {instances_to_tag}")
+
+
+def _tag_multiple_instances(deploy_region_id, name, application_group_name, instance_ids):
+    """
+    为多个实例打 tag（已废弃，使用 _ensure_instances_tagged 代替）
+    """
+    remaining_instance_ids = instance_ids[1:]
+    if remaining_instance_ids:
+        _ensure_instances_tagged(deploy_region_id, name, application_group_name, remaining_instance_ids)
 
 
 def _list_application_group_deployment(client, name, application_group_name, status_list):
@@ -490,7 +703,8 @@ def _create_deploy_parameters(name, application_group_name, region_id_oss, bucke
             "ApplicationStop": application_stop,
             "PackageName": package_name
         },
-        "ServiceId": "service-561c4b4e45c74dcaa741"
+        "TemplateName": "oss-revision",
+        "ServiceId": "service-af8acc2d6f4044f4b5ea"
     }
 
 
