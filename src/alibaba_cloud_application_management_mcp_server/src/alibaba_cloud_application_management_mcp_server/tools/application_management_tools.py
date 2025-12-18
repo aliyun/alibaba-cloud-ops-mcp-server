@@ -339,9 +339,8 @@ def _handle_new_application_group(client, name, application_group_name, deploy_r
     )
 
 
-def _handle_existing_application_group(client, name, application_group_name, deploy_region_id,
-                                       region_id_oss, bucket_name, object_name, version_id,
-                                       application_start, application_stop):
+def _handle_existing_application_group(name, application_group_name, deploy_region_id, region_id_oss, bucket_name,
+                                       object_name, version_id, application_start, application_stop):
     logger.info(f"[code_deploy] Application group '{application_group_name}' already exists, skipping creation")
 
     location_hooks = _create_location_and_hooks(
