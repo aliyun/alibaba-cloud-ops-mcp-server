@@ -1,6 +1,6 @@
 [project]
 name = "alibaba-cloud-application-management-mcp-server"
-version = "1.0.4"
+version = "1.0.0"
 description = "The application management MCP server for Alibaba Cloud"
 readme = "README.md"
 authors = [
@@ -9,6 +9,15 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "alibabacloud-cms20190101>=3.1.4",
+    "alibabacloud-ecs20140526>=6.1.0",
+    "alibabacloud-oos20190601>=3.5.0",
+    "alibabacloud_oss_v2>=1.1.0",
+    "alibabacloud-credentials>=1.0.3",
+    "alibabacloud-credentials-api==1.0.1",
+    "click>=8.1.8",
+    "fastmcp==2.8.0",
+    "pydantic==2.11.3",
     "alibaba-cloud-ops-mcp-server"
 ]
 
