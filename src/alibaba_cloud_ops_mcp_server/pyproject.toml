@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "alibabacloud-cms20190101>=3.1.4",
     "alibabacloud-ecs20140526>=6.1.0",
-    "alibabacloud-oos20190601>=3.4.1",
+    "alibabacloud-oos20190601>=3.5.0",
     "alibabacloud_oss_v2>=1.1.0",
     "alibabacloud-credentials>=1.0.3",
     "alibabacloud-credentials-api==1.0.1",

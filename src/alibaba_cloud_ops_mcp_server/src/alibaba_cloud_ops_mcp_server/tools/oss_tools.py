@@ -1,19 +1,23 @@
-# oss_tools.py
 import os
+import mimetypes
+import logging
+import json
 import alibabacloud_oss_v2 as oss
-from alibaba_cloud_ops_mcp_server.alibabacloud.utils import get_credentials_from_header
 
 from pydantic import Field
 from alibabacloud_oss_v2 import Credentials
 from alibabacloud_oss_v2.credentials import EnvironmentVariableCredentialsProvider
 from alibabacloud_credentials.client import Client as CredClient
 
-
 tools = []
+
+
+logger = logging.getLogger(__name__)
 
 
 class CredentialsProvider(EnvironmentVariableCredentialsProvider):
     def __init__(self) -> None:
+        from alibaba_cloud_ops_mcp_server.alibabacloud.utils import get_credentials_from_header
         credentials = get_credentials_from_header()
         if credentials:
             access_key_id = credentials.get('AccessKeyId', None)
@@ -114,3 +118,64 @@ def OSS_DeleteBucket(
     client = create_client(region_id=RegionId)
     result = client.delete_bucket(oss.DeleteBucketRequest(bucket=BucketName))
     return result.__str__()
+
+
+
+def OSS_PutObject(
+    BucketName: str = Field(description='AlibabaCloud OSS Bucket Name'),
+    ObjectKey: str = Field(description='AlibabaCloud OSS Object Key (file path/name in OSS)'),
+    FilePath: str = Field(description='Local file path to upload'),
+    RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
+    ContentType: str = Field(description='Content type of the object (e.g., text/plain, application/json). If not provided, will be inferred from file extension.', default=None)
+):
+    """上传本地文件到指定的OSS存储空间。"""
+    logger.info(f"[OSS_PutObject] Input parameters: BucketName={BucketName}, ObjectKey={ObjectKey}, "
+                f"FilePath={FilePath}, RegionId={RegionId}, ContentType={ContentType}")
+    if not BucketName:
+        raise ValueError("Bucket name is required")
+    if not ObjectKey:
+        raise ValueError("Object key is required")
+    if not FilePath:
+        raise ValueError("File path is required")
+
+    # Check if file exists
+    if not os.path.exists(FilePath):
+        raise FileNotFoundError(f"File not found: {FilePath}")
+
+    if not os.path.isfile(FilePath):
+        raise ValueError(f"Path is not a file: {FilePath}")
+
+    client = create_client(region_id=RegionId)
+
+    # Read file content in binary mode
+    with open(FilePath, 'rb') as f:
+        body = f.read()
+
+    # Infer content type from file extension if not provided
+    if not ContentType:
+        ContentType, _ = mimetypes.guess_type(FilePath)
+        if not ContentType:
+            ContentType = 'application/octet-stream'  # Default to binary
+
+    # Prepare put object request
+    request = oss.PutObjectRequest(
+        bucket=BucketName,
+        key=ObjectKey,
+        body=body
+    )
+
+    # Set content type
+    request.content_type = ContentType
+
+    result = client.put_object(request)
+    version_id = result.version_id
+    response = {
+        'status_code': result.status_code,
+        'etag': result.etag if hasattr(result, 'etag') else None,
+        'file_size': len(body),
+        'content_type': ContentType,
+        'version_id': version_id,
+        'message': f'Successfully uploaded file {FilePath} as {ObjectKey} to bucket {BucketName}'
+    }
+    logger.info(f"[OSS_PutObject] Response: {json.dumps(response, ensure_ascii=False)}")
+    return response
