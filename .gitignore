@@ -6,7 +6,7 @@ dist/
 wheels/
 *.egg-info
 .coverage
-
+.code_deploy
 # Virtual environments
 .venv
 

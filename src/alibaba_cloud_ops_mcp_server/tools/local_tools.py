@@ -44,7 +44,7 @@ def _validate_path(path: str) -> Path:
 
 
 @tools.append
-def ListDirectory(
+def LOCAL_ListDirectory(
     path: str = Field(description="Directory path to list (absolute or relative path)"),
     recursive: bool = Field(description="Whether to recursively list subdirectories", default=False)
 ):
@@ -105,7 +105,7 @@ def ListDirectory(
 
 
 @tools.append
-def RunShellScript(
+def LOCAL_RunShellScript(
     script: str = Field(description="Shell script content or command to execute"),
     working_directory: Optional[str] = Field(description="Working directory for command execution", default=None),
     timeout: int = Field(description="Command execution timeout in seconds", default=300),
@@ -165,7 +165,7 @@ def RunShellScript(
 
 
 @tools.append
-def AnalyzeDeployStack(
+def LOCAL_AnalyzeDeployStack(
     directory: str = Field(description="Directory path to analyze (absolute or relative path)")
 ):
     """识别项目部署方式和技术栈。支持识别 npm、Python、Java、Go、Docker 等部署方式。"""

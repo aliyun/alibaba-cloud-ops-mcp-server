@@ -116,7 +116,7 @@ wheels = [
 
 [[package]]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.9.10"
+version = "0.9.12"
 source = { editable = "." }
 dependencies = [
     { name = "alibabacloud-cms20190101" },
@@ -142,7 +142,7 @@ requires-dist = [
     { name = "alibabacloud-credentials", specifier = ">=1.0.3" },
     { name = "alibabacloud-credentials-api", specifier = "==1.0.1" },
     { name = "alibabacloud-ecs20140526", specifier = ">=6.1.0" },
-    { name = "alibabacloud-oos20190601", specifier = ">=3.4.1" },
+    { name = "alibabacloud-oos20190601", specifier = ">=3.5.0" },
     { name = "alibabacloud-oss-v2", specifier = ">=1.1.0" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "fastmcp", specifier = "==2.8.0" },
@@ -211,12 +211,9 @@ wheels = [
 
 [[package]]
 name = "alibabacloud-endpoint-util"
-version = "0.0.3"
+version = "0.0.4"
 source = { registry = "http://yum.tbsite.net/pypi/simple/" }
-dependencies = [
-    { name = "alibabacloud-tea" },
-]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/24/54/56736a0f224b3f2b65bb9c9ff9e20fa390351a7587c99f19ca1f8d596ae1/alibabacloud_endpoint_util-0.0.3.tar.gz", hash = "sha256:8c0efb76fdcc3af4ca716ef24bbce770201a3f83f98c0afcf81655f684b9c7d2" }
+sdist = { url = "http://yum.tbsite.net/pypi/packages/92/7d/8cc92a95c920e344835b005af6ea45a0db98763ad6ad19299d26892e6c8d/alibabacloud_endpoint_util-0.0.4.tar.gz", hash = "sha256:a593eb8ddd8168d5dc2216cd33111b144f9189fcd6e9ca20e48f358a739bbf90" }
 
 [[package]]
 name = "alibabacloud-gateway-spi"
@@ -229,7 +226,7 @@ sdist = { url = "http://yum.tbsite.net/pypi/packages/ab/98/d7111245f17935bf72ee9
 
 [[package]]
 name = "alibabacloud-oos20190601"
-version = "3.4.1"
+version = "3.5.0"
 source = { registry = "http://yum.tbsite.net/pypi/simple/" }
 dependencies = [
     { name = "alibabacloud-endpoint-util" },
@@ -237,9 +234,9 @@ dependencies = [
     { name = "alibabacloud-tea-openapi" },
     { name = "alibabacloud-tea-util" },
 ]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/ac/33/6b428e80d37b25f01cc1813010279a0fe0adc3c28af1d45ecd95ac61288d/alibabacloud_oos20190601-3.4.1.tar.gz", hash = "sha256:f09dc7cef6c40f64c4de81784f8ec7f9463f895420dc045790d7a5c44aa7d902" }
+sdist = { url = "http://yum.tbsite.net/pypi/packages/cf/97/b350cc501f901bac94fbf8c65c73bd123d6c5c66564b481dd607ee373cd0/alibabacloud_oos20190601-3.5.0.tar.gz", hash = "sha256:4f33970a245e0b357c7c38de681d390a46085a9680ec2edcebefc01fced5e9b1" }
 wheels = [
-    { url = "http://yum.tbsite.net/pypi/packages/3e/32/70e97fb34c9b8609308a93dde5f6be9056470b1010a0b762e4d8d1327321/alibabacloud_oos20190601-3.4.1-py3-none-any.whl", hash = "sha256:ea0546da92efe7afe9e14fe62799dea291137bf82746cda2f8e25b9b31719d25" },
+    { url = "http://yum.tbsite.net/pypi/packages/d6/2a/ffd89781bd7c02bef0ee9e7df0426bad0e658d131f4580a943749837c103/alibabacloud_oos20190601-3.5.0-py3-none-any.whl", hash = "sha256:efc53e1c037dd0ff561d8f52246f24d3d1845bed47c30748f1bf63d79ee9c1a3" },
 ]
 
 [[package]]
@@ -275,16 +272,19 @@ sdist = { url = "http://yum.tbsite.net/pypi/packages/9a/7d/b22cb9a0d4f396ee0f3f9
 
 [[package]]
 name = "alibabacloud-tea-openapi"
-version = "0.3.13"
+version = "0.4.2"
 source = { registry = "http://yum.tbsite.net/pypi/simple/" }
 dependencies = [
     { name = "alibabacloud-credentials" },
     { name = "alibabacloud-gateway-spi" },
-    { name = "alibabacloud-openapi-util" },
     { name = "alibabacloud-tea-util" },
-    { name = "alibabacloud-tea-xml" },
+    { name = "cryptography" },
+    { name = "darabonba-core" },
 ]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/21/02/f5a6519efee96141a6e5af4e79b768bdae77dd62992bca02a710e06c36b1/alibabacloud_tea_openapi-0.3.13.tar.gz", hash = "sha256:77034911dbed41de440e9b6de38cb24646723aa1d0059cefeb3906f8c0a4523e" }
+sdist = { url = "http://yum.tbsite.net/pypi/packages/91/cd/82d548d0d1b0f525e54a4405fff8dae1b7ea43c54396d90ba1c0b207bf9a/alibabacloud_tea_openapi-0.4.2.tar.gz", hash = "sha256:0a8d79374ca692469472355a125969c8a22cc5fb08328c75c26663ccf5c8b168" }
+wheels = [
+    { url = "http://yum.tbsite.net/pypi/packages/92/aa/21eae916d4befce8da5b01e22756fb47cb54fdea735ed3687ae01cb86baa/alibabacloud_tea_openapi-0.4.2-py3-none-any.whl", hash = "sha256:c498065a297fd1972ed7709ef935c9ce1f9757f267f68933de6e63853f37366f" },
+]
 
 [[package]]
 name = "alibabacloud-tea-util"
@@ -294,15 +294,6 @@ dependencies = [
     { name = "alibabacloud-tea" },
 ]
 sdist = { url = "http://yum.tbsite.net/pypi/packages/23/18/35be17103c8f40f9eebec3b1567f51b3eec09c3a47a5dd62bcb413f4e619/alibabacloud_tea_util-0.3.13.tar.gz", hash = "sha256:8cbdfd2a03fbbf622f901439fa08643898290dd40e1d928347f6346e43f63c90" }
-
-[[package]]
-name = "alibabacloud-tea-xml"
-version = "0.0.2"
-source = { registry = "http://yum.tbsite.net/pypi/simple/" }
-dependencies = [
-    { name = "alibabacloud-tea" },
-]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/3b/30/f934051b1f65525d450cb225e4ac81dc3b77d808b0f79d51059d2a7ad3d3/alibabacloud_tea_xml-0.0.2.tar.gz", hash = "sha256:f0135e8148fd7d9c1f029db161863f37f144f837c280cba16c2edeb2f9c549d8" }
 
 [[package]]
 name = "annotated-types"
@@ -663,6 +654,19 @@ wheels = [
     { url = "http://yum.tbsite.net/pypi/packages/9c/b4/7a494ce1032323ca9db9a3661894c66e0d7142ad2079a4249303402d8c71/cryptography-44.0.2-pp311-pypy311_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:96e7a5e9d6e71f9f4fca8eebfd603f8e86c5225bb18eb621b2c1e50b290a9471" },
     { url = "http://yum.tbsite.net/pypi/packages/45/f8/6b3ec0bc56123b344a8d2b3264a325646d2dcdbdd9848b5e6f3d37db90b3/cryptography-44.0.2-pp311-pypy311_pp73-manylinux_2_34_aarch64.whl", hash = "sha256:d1b3031093a366ac767b3feb8bcddb596671b3aaff82d4050f984da0c248b615" },
     { url = "http://yum.tbsite.net/pypi/packages/57/ff/f3b4b2d007c2a646b0f69440ab06224f9cf37a977a72cdb7b50632174e8a/cryptography-44.0.2-pp311-pypy311_pp73-manylinux_2_34_x86_64.whl", hash = "sha256:04abd71114848aa25edb28e225ab5f268096f44cf0127f3d36975bdf1bdf3390" },
+]
+
+[[package]]
+name = "darabonba-core"
+version = "1.0.5"
+source = { registry = "http://yum.tbsite.net/pypi/simple/" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "alibabacloud-tea" },
+    { name = "requests" },
+]
+wheels = [
+    { url = "http://yum.tbsite.net/pypi/packages/66/d3/a7daaee544c904548e665829b51a9fa2572acb82c73ad787a8ff90273002/darabonba_core-1.0.5-py3-none-any.whl", hash = "sha256:671ab8dbc4edc2a8f88013da71646839bb8914f1259efc069353243ef52ea27c" },
 ]
 
 [[package]]

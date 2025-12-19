@@ -99,9 +99,14 @@ ECS_LIST_PARAMETERS = {
 
 def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
     service = service.lower()
-    api_meta, _ = ApiMetaClient.get_api_meta(service, api)
+    try:
+        api_meta, _ = ApiMetaClient.get_api_meta(service, api)
+    except Exception as e:
+        logger.error(f'Get API Meta Error: {e}')
+        api_meta = {}
+
     version = ApiMetaClient.get_service_version(service)
-    method = 'POST' if api_meta.get('methods', [])[0] == 'post' else 'GET'
+    method = 'POST' if api_meta.get('methods', ['post'])[0] == 'post' else 'GET'
     path = api_meta.get('path', '/')
     style = ApiMetaClient.get_service_style(service)
     
@@ -263,6 +268,7 @@ def _create_and_decorate_tool(mcp: FastMCP, service: str, api: str):
     decorated_function = mcp.tool(name=function_name)(dynamic_lambda)
 
     return decorated_function
+
 
 def create_api_tools(mcp: FastMCP, config:dict):
     for service_code, apis in config.items():

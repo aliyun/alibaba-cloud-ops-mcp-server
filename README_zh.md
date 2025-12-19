@@ -1,38 +1,26 @@
-# Alibaba Cloud MCP Server
+# Alibaba Cloud Ops MCP Server
 
 [![GitHub stars](https://img.shields.io/github/stars/aliyun/alibaba-cloud-ops-mcp-server?style=social)](https://github.com/aliyun/alibaba-cloud-ops-mcp-server)
 
-[English README](README.md)
+[English README](./README.md)
 
-本仓库包含两个[模型上下文协议（MCP）](https://modelcontextprotocol.io/introduction)服务器，提供与阿里云服务的无缝集成：
-
-1. **Alibaba Cloud Ops MCP Server** - 使 AI 助手能够操作阿里云上的资源，支持 ECS、云监控、OOS、OSS、VPC、RDS 等广泛使用的云产品。
-2. **Alibaba Cloud Application Management MCP Server** - 使 AI 助手能够分析、构建和部署应用到阿里云 ECS 实例。
+Alibaba Cloud Ops MCP Server是一个[模型上下文协议（MCP）](https://modelcontextprotocol.io/introduction)服务器，提供与阿里云API的无缝集成，使AI助手能够操作阿里云上的资源，支持ECS、云监控、OOS、OSS、VPC、RDS等广泛使用的云产品。同时，它还使AI助手能够分析、构建和部署应用到阿里云ECS实例。
 
 ## 功能特性
-
-### Alibaba Cloud Ops MCP Server
 
 - **ECS 管理**：创建、启动、停止、重启、删除实例，运行命令，查看实例、地域、可用区、镜像、安全组等
 - **VPC 管理**：查看 VPC 和 VSwitch
 - **RDS 管理**：查询、启动、停止、重启 RDS 实例
 - **OSS 管理**：查看、创建、删除存储桶，查看对象信息
 - **云监控**：获取 ECS 实例的 CPU 使用率、负载平均值、内存使用率和磁盘使用率指标
-- **动态 API 工具**：支持阿里云 OpenAPI 操作
-
-### Alibaba Cloud Application Management MCP Server
-
 - **应用部署**：自动部署应用到 ECS 实例，支持自动创建应用和应用分组
 - **项目分析**：自动识别项目技术栈和部署方式（npm、Python、Java、Go、Docker 等）
-- **环境安装**：在 ECS 实例上安装部署环境（Docker、Java、Python、Node.js、Go、Nginx、Git）
-- **部署管理**：查询部署状态和获取上次部署信息
-- **OSS 集成**：将部署产物上传到 OSS 存储桶
 - **本地文件操作**：列出目录、执行 shell 脚本、分析项目结构
 - **动态 API 工具**：支持阿里云 OpenAPI 操作
 
 ## 准备
 
-安装 [uv](https://github.com/astral-sh/uv)
+安装[uv](https://github.com/astral-sh/uv)
 
 ```bash
 # On macOS and Linux.
@@ -41,11 +29,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ## 配置
 
-使用 [VS Code](https://code.visualstudio.com/) + [Cline](https://cline.bot/) 配置 MCP Server。
+使用 [VS Code](https://code.visualstudio.com/) + [Cline](https://cline.bot/) 配置MCP Server
 
-### Alibaba Cloud Ops MCP Server
-
-要将 `alibaba-cloud-ops-mcp-server` MCP 服务器与任何其他 MCP 客户端一起使用，您可以手动添加此配置并重新启动以使更改生效：
+要将 `alibaba-cloud-ops-mcp-server` MCP 服务器与任何其他 MCP 服务器一起使用，您可以手动添加此配置并重新启动以使更改生效：
 
 ```json
 {
@@ -65,32 +51,13 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 }
 ```
 
-### Alibaba Cloud Application Management MCP Server
-
-要将 `alibaba-cloud-application-management-mcp-server` MCP 服务器与任何其他 MCP 客户端一起使用，您可以手动添加此配置并重新启动以使更改生效：
-
-```json
-{
-  "mcpServers": {
-    "alibaba-cloud-application-management-mcp-server": {
-      "timeout": 600,
-      "command": "uvx",
-      "args": [
-        "alibaba-cloud-application-management-mcp-server@latest"
-      ],
-      "env": {
-        "ALIBABA_CLOUD_ACCESS_KEY_ID": "Your Access Key ID",
-        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "Your Access Key SECRET"
-      }
-    }
-  }
-}
-```
+[详细参数说明见 MCP 启动参数文档](./README_mcp_args.md)
 
 ## MCP市场集成
 
-* [Cline](https://cline.bot/mcp-marketplace)
+* [Qoder](https://qoder.com) <a href="qoder://aicoding.aicoding-deeplink/mcp/add?name=alibaba-cloud-ops-mcp-server&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnV2eCUyMiUyQyUyMmFyZ3MlMjIlM0ElNUIlMjJhbGliYWJhLWNsb3VkLW9wcy1tY3Atc2VydmVyJTQwbGF0ZXN0JTIyJTVEJTJDJTIyZW52JTIyJTNBJTdCJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEJTIyJTNBJTIyWW91ciUyMEFjY2VzcyUyMEtleSUyMElkJTIyJTJDJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCUyMiUzQSUyMllvdXIlMjBBY2Nlc3MlMjBLZXklMjBTRUNSRVQlMjIlN0QlN0Q%3D"><img src="./image/qoder.svg" alt="Install MCP Server" height="20"></a>
 * [Cursor](https://docs.cursor.com/tools) [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=alibaba-cloud-ops-mcp-server&config=eyJ0aW1lb3V0Ijo2MDAsImNvbW1hbmQiOiJ1dnggYWxpYmFiYS1jbG91ZC1vcHMtbWNwLXNlcnZlckBsYXRlc3QiLCJlbnYiOnsiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEIjoiWW91ciBBY2Nlc3MgS2V5IElkIiwiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCI6IllvdXIgQWNjZXNzIEtleSBTZWNyZXQifX0%3D)
+* [Cline](https://cline.bot/mcp-marketplace)
 * [魔搭](https://www.modelscope.cn/mcp/servers/@aliyun/alibaba-cloud-ops-mcp-server)
 * [通义灵码](https://lingma.aliyun.com/)
 * [Smithery AI](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server)
@@ -105,8 +72,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 * [阿里云CloudOps MCP正式上架百炼平台MCP市场](https://developer.aliyun.com/article/1665019)
 
 ## 功能点（Tool）
-
-### Alibaba Cloud Ops MCP Server 工具
 
 | **产品** | **工具** | **功能** | **实现方式** | **状态** |
 | --- | --- | --- | --- | --- |
@@ -135,52 +100,32 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 |  | DeleteBucket | 删除存储空间 | API | Done |
 |  | ListObjects | 查看存储空间中的文件信息 | API | Done |
 | CloudMonitor | GetCpuUsageData | 获取ECS实例的CPU使用率数据 | API | Done |
-| | GetCpuLoadavgData | 获取CPU一分钟平均负载指标数据 | API | Done |
-| | GetCpuloadavg5mData | 获取CPU五分钟平均负载指标数据 | API | Done |
-| | GetCpuloadavg15mData | 获取CPU十五分钟平均负载指标数据 | API | Done |
-| | GetMemUsedData | 获取内存使用量指标数据 | API | Done |
-| | GetMemUsageData | 获取内存利用率指标数据 | API | Done |
-| | GetDiskUsageData | 获取磁盘利用率指标数据 | API | Done |
-| | GetDiskTotalData | 获取磁盘分区总容量指标数据 | API | Done |
-| | GetDiskUsedData | 获取磁盘分区使用量指标数据 | API | Done |
-
-### Alibaba Cloud Application Management MCP Server 工具
-
-#### 应用管理工具
-
-| **工具** | **功能** | **状态** |
-| --- | --- | --- |
-| CodeDeploy | 部署应用到 ECS 实例，自动上传部署产物到 OSS | Done |
-| GetDeployStatus | 查询应用分组的部署状态 | Done |
-| GetLastDeploymentInfo | 获取上次部署的信息 | Done |
-
-#### 本地工具
-
-| **工具** | **功能** | **状态** |
-| --- | --- | --- |
-| ListDirectory | 列出目录中的文件和子目录 | Done |
-| RunShellScript | 执行 shell 脚本或命令 | Done |
-| AnalyzeDeployStack | 识别项目部署方式和技术栈 | Done |
-
-#### OOS 工具
-
-| **工具** | **功能** | **状态** |
-| --- | --- | --- |
-| InstallDeploymentEnvironment | 在 ECS 实例上安装部署环境（Docker、Java、Python、Node.js、Go、Nginx、Git） | Done |
-| ListExecutions | 根据执行 ID 查询 OOS 执行状态 | Done |
+|  | GetCpuLoadavgData | 获取CPU一分钟平均负载指标数据 | API | Done |
+|  | GetCpuloadavg5mData | 获取CPU五分钟平均负载指标数据 | API | Done |
+|  | GetCpuloadavg15mData | 获取CPU十五分钟平均负载指标数据 | API | Done |
+|  | GetMemUsedData | 获取内存使用量指标数据 | API | Done |
+|  | GetMemUsageData | 获取内存利用率指标数据 | API | Done |
+|  | GetDiskUsageData | 获取磁盘利用率指标数据 | API | Done |
+|  | GetDiskTotalData | 获取磁盘分区总容量指标数据 | API | Done |
+|  | GetDiskUsedData | 获取磁盘分区使用量指标数据 | API | Done |
+| 应用管理 | OOS_CodeDeploy | 部署应用到 ECS 实例，自动上传部署产物到 OSS | OOS | Done |
+|  | OOS_GetDeployStatus | 查询应用分组的部署状态 | API | Done |
+|  | OOS_GetLastDeploymentInfo | 获取上次部署的信息 | API | Done |
+| 本地工具 | LOCAL_ListDirectory | 列出目录中的文件和子目录 | Local | Done |
+|  | LOCAL_RunShellScript | 执行 shell 脚本或命令 | Local | Done |
+|  | LOCAL_AnalyzeDeployStack | 识别项目部署方式和技术栈 | Local | Done |
 
 ## 部署流程
 
 典型的部署流程包括：
 
-1. **项目分析**：使用 `AnalyzeDeployStack` 识别项目的技术栈和部署方式
+1. **项目分析**：使用 `LOCAL_AnalyzeDeployStack` 识别项目的技术栈和部署方式
 2. **构建产物**：在本地构建或打包应用（例如，创建 tar.gz 或 zip 文件）
-3. **部署应用**：使用 `CodeDeploy` 将应用部署到 ECS 实例
+3. **部署应用**：使用 `OOS_CodeDeploy` 将应用部署到 ECS 实例
    - 如果应用和应用分组不存在，会自动创建
    - 自动上传部署产物到 OSS
    - 部署到指定的 ECS 实例
-4. **安装环境**（可选）：使用 `InstallDeploymentEnvironment` 在 ECS 实例上安装所需的运行时环境
-5. **监控部署**：使用 `GetDeployStatus` 检查部署状态
+4. **监控部署**：使用 `OOS_GetDeployStatus` 检查部署状态
 
 ## 重要提示
 
@@ -196,5 +141,4 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 如果您有任何疑问，欢迎加入 [Alibaba Cloud Ops MCP 交流群](https://qr.dingtalk.com/action/joingroup?code=v1,k1,iFxYG4jjLVh1jfmNAkkclji7CN5DSIdT+jvFsLyI60I=&_dt_no_comment=1&origin=11) (钉钉群：113455011677) 进行交流。
 
-<img src="src/alibaba_cloud_ops_mcp_server/image/Alibaba-Cloud-Ops-MCP-User-Group-zh.png" width="500">
-
+<img src="https://oos-public-cn-hangzhou.oss-cn-hangzhou.aliyuncs.com/alibaba-cloud-ops-mcp-server/Alibaba-Cloud-Ops-MCP-User-Group-zh.png" width="500">

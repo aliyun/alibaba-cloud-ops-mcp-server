@@ -1,30 +1,23 @@
-# oss_tools.py
 import os
 import mimetypes
 import logging
 import json
 import alibabacloud_oss_v2 as oss
-from alibaba_cloud_ops_mcp_server.alibabacloud.utils import get_credentials_from_header
 
 from pydantic import Field
 from alibabacloud_oss_v2 import Credentials
 from alibabacloud_oss_v2.credentials import EnvironmentVariableCredentialsProvider
 from alibabacloud_credentials.client import Client as CredClient
 
-logger = logging.getLogger(__name__)
-
-
 tools = []
 
 
-def _append_tool(func):
-    """装饰器：将函数添加到 tools 列表中并返回函数本身"""
-    tools.append(func)
-    return func
+logger = logging.getLogger(__name__)
 
 
 class CredentialsProvider(EnvironmentVariableCredentialsProvider):
     def __init__(self) -> None:
+        from alibaba_cloud_ops_mcp_server.alibabacloud.utils import get_credentials_from_header
         credentials = get_credentials_from_header()
         if credentials:
             access_key_id = credentials.get('AccessKeyId', None)
@@ -52,29 +45,28 @@ def create_client(region_id: str) -> oss.Client:
     return oss.Client(cfg)
 
 
+@tools.append
 def OSS_ListBuckets(
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
     Prefix: str = Field(description='AlibabaCloud OSS Bucket Name prefix', default=None)
 ):
     """列出指定区域的所有OSS存储空间。"""
-    logger.info(f"[OSS_ListBuckets] Input parameters: RegionId={RegionId}, Prefix={Prefix}")
     client = create_client(region_id=RegionId)
     paginator = client.list_buckets_paginator()
     results = []
     for page in paginator.iter_page(oss.ListBucketsRequest(prefix=Prefix)):
         for bucket in page.buckets:
             results.append(bucket.__str__())
-    logger.info(f"[OSS_ListBuckets] Response: {json.dumps(results, ensure_ascii=False)}")
     return results
 
 
+@tools.append
 def OSS_ListObjects(
     BucketName: str = Field(description='AlibabaCloud OSS Bucket Name'),
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
     Prefix: str = Field(description='AlibabaCloud OSS Bucket Name prefix', default=None)
 ):
     """获取指定OSS存储空间中的所有文件信息。"""
-    logger.info(f"[OSS_ListObjects] Input parameters: BucketName={BucketName}, RegionId={RegionId}, Prefix={Prefix}")
     if not BucketName:
         raise ValueError("Bucket name is required")
     client = create_client(region_id=RegionId)
@@ -86,10 +78,10 @@ def OSS_ListObjects(
         )):
         for object in page.contents:
             results.append(object.__str__())
-    logger.info(f"[OSS_ListObjects] Response: {json.dumps(results, ensure_ascii=False)}")
     return results
 
 
+@tools.append
 def OSS_PutBucket(
     BucketName: str = Field(description='AlibabaCloud OSS Bucket Name'),
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
@@ -106,8 +98,6 @@ def OSS_PutBucket(
                                                 'zones in the same region.', default='LRS')
 ):
     """创建一个新的OSS存储空间。"""
-    logger.info(f"[OSS_PutBucket] Input parameters: BucketName={BucketName}, RegionId={RegionId}, "
-                f"StorageClass={StorageClass}, DataRedundancyType={DataRedundancyType}")
     client = create_client(region_id=RegionId)
     result = client.put_bucket(oss.PutBucketRequest(
         bucket=BucketName,
@@ -116,22 +106,19 @@ def OSS_PutBucket(
             data_redundancy_type=DataRedundancyType
         )
     ))
-    response = result.__str__()
-    logger.info(f"[OSS_PutBucket] Response: {response}")
-    return response
+    return result.__str__()
 
 
+@tools.append
 def OSS_DeleteBucket(
     BucketName: str = Field(description='AlibabaCloud OSS Bucket Name'),
     RegionId: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou')
 ):
     """删除指定的OSS存储空间。"""
-    logger.info(f"[OSS_DeleteBucket] Input parameters: BucketName={BucketName}, RegionId={RegionId}")
     client = create_client(region_id=RegionId)
     result = client.delete_bucket(oss.DeleteBucketRequest(bucket=BucketName))
-    response = result.__str__()
-    logger.info(f"[OSS_DeleteBucket] Response: {response}")
-    return response
+    return result.__str__()
+
 
 
 def OSS_PutObject(
