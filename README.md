@@ -4,7 +4,19 @@
 
 [中文版本](./README_zh.md)
 
-Alibaba Cloud Ops MCP Server is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides seamless integration with Alibaba Cloud APIs, enabling AI assistants to operation resources on Alibaba Cloud, supporting ECS, Cloud Monitor, OOS and other widely used cloud products.
+Alibaba Cloud Ops MCP Server is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides seamless integration with Alibaba Cloud APIs, enabling AI assistants to operate resources on Alibaba Cloud, supporting ECS, Cloud Monitor, OOS, OSS, VPC, RDS and other widely used cloud products. It also enables AI assistants to analyze, build, and deploy applications to Alibaba Cloud ECS instances.
+
+## Features
+
+- **ECS Management**: Create, start, stop, reboot, delete instances, run commands, view instances, regions, zones, images, security groups, and more
+- **VPC Management**: View VPCs and VSwitches
+- **RDS Management**: List, start, stop, and restart RDS instances
+- **OSS Management**: List, create, delete buckets, and view objects
+- **Cloud Monitor**: Get CPU usage, load average, memory usage, and disk usage metrics for ECS instances
+- **Application Deployment**: Deploy applications to ECS instances with automatic application and application group management
+- **Project Analysis**: Automatically identify project technology stack and deployment methods (npm, Python, Java, Go, Docker, etc.)
+- **Local File Operations**: List directories, run shell scripts, and analyze project structures
+- **Dynamic API Tools**: Support for Alibaba Cloud OpenAPI operations
 
 ## Prepare
 
@@ -43,8 +55,9 @@ To use `alibaba-cloud-ops-mcp-server` MCP Server with any other MCP Client, you 
 
 ## MCP Maketplace Integration
 
-* [Cline](https://cline.bot/mcp-marketplace)
+* [Qoder](qoder://aicoding.aicoding-deeplink/mcp/add?name=alibaba-cloud-ops-mcp-server&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnV2eCUyMiUyQyUyMmFyZ3MlMjIlM0ElNUIlMjJhbGliYWJhLWNsb3VkLW9wcy1tY3Atc2VydmVyJTQwbGF0ZXN0JTIyJTVEJTJDJTIyZW52JTIyJTNBJTdCJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEJTIyJTNBJTIyWW91ciUyMEFjY2VzcyUyMEtleSUyMElkJTIyJTJDJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCUyMiUzQSUyMllvdXIlMjBBY2Nlc3MlMjBLZXklMjBTRUNSRVQlMjIlN0QlN0Q%3D) [<img src="./image/qoder.svg" alt="Install MCP Server" height="20">](qoder://aicoding.aicoding-deeplink/mcp/add?name=alibaba-cloud-ops-mcp-server&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnV2eCUyMiUyQyUyMmFyZ3MlMjIlM0ElNUIlMjJhbGliYWJhLWNsb3VkLW9wcy1tY3Atc2VydmVyJTQwbGF0ZXN0JTIyJTVEJTJDJTIyZW52JTIyJTNBJTdCJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEJTIyJTNBJTIyWW91ciUyMEFjY2VzcyUyMEtleSUyMElkJTIyJTJDJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCUyMiUzQSUyMllvdXIlMjBBY2Nlc3MlMjBLZXklMjBTRUNSRVQlMjIlN0QlN0Q%3D)
 * [Cursor](https://docs.cursor.com/tools) [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=alibaba-cloud-ops-mcp-server&config=eyJ0aW1lb3V0Ijo2MDAsImNvbW1hbmQiOiJ1dnggYWxpYmFiYS1jbG91ZC1vcHMtbWNwLXNlcnZlckBsYXRlc3QiLCJlbnYiOnsiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEIjoiWW91ciBBY2Nlc3MgS2V5IElkIiwiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCI6IllvdXIgQWNjZXNzIEtleSBTZWNyZXQifX0%3D)
+* [Cline](https://cline.bot/mcp-marketplace)
 * [ModelScope](https://www.modelscope.cn/mcp/servers/@aliyun/alibaba-cloud-ops-mcp-server?lang=en_US)
 * [Lingma](https://lingma.aliyun.com/)
 * [Smithery AI](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server)
@@ -60,7 +73,7 @@ To use `alibaba-cloud-ops-mcp-server` MCP Server with any other MCP Client, you 
 
 ## Tools
 
-| **Product** | **Tool** | **Function** | **Implematation** | **Status** |
+| **Product** | **Tool** | **Function** | **Implementation** | **Status** |
 | --- | --- | --- | --- | --- |
 | ECS | RunCommand | Run Command | OOS | Done |
 | | StartInstances | Start Instances | OOS | Done |
@@ -95,6 +108,24 @@ To use `alibaba-cloud-ops-mcp-server` MCP Server with any other MCP Client, you 
 | | GetDiskUsageData | Get Disk Utilization Metric Data | API | Done |
 | | GetDiskTotalData | Get Total Disk Partition Capacity Metric Data | API | Done |
 | | GetDiskUsedData | Get Disk Partition Usage Metric Data | API | Done |
+| Application Management | OOS_CodeDeploy | Deploy applications to ECS instances with automatic artifact upload to OSS | OOS | Done |
+| | OOS_GetDeployStatus | Query deployment status of application groups | API | Done |
+| | OOS_GetLastDeploymentInfo | Retrieve information about the last deployment | API | Done |
+| Local | LOCAL_ListDirectory | List files and subdirectories in a directory | Local | Done |
+| | LOCAL_RunShellScript | Execute shell scripts or commands | Local | Done |
+| | LOCAL_AnalyzeDeployStack | Identify project deployment methods and technology stack | Local | Done |
+
+## Deployment Workflow
+
+The typical deployment workflow includes:
+
+1. **Project Analysis**: Use `LOCAL_AnalyzeDeployStack` to identify the project's technology stack and deployment method
+2. **Build Artifacts**: Build or package the application locally (e.g., create tar.gz or zip files)
+3. **Deploy Application**: Use `OOS_CodeDeploy` to deploy the application to ECS instances
+   - Automatically creates application and application group if they don't exist
+   - Uploads artifacts to OSS
+   - Deploys to specified ECS instances
+4. **Monitor Deployment**: Use `OOS_GetDeployStatus` to check deployment status
 
 ## Contact us
 

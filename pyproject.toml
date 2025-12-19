@@ -1,10 +1,11 @@
 [project]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.9.11"
+version = "0.9.12"
 description = "A MCP server for Alibaba Cloud"
 readme = "README.md"
 authors = [
-    { name = "Zheng Dayu", email = "dayu.zdy@alibaba-inc.com" }
+    { name = "Zheng Dayu", email = "dayu.zdy@alibaba-inc.com" },
+    { name = "Zhao Shuaibo", email = "zhaoshuaibo.zsb@alibaba-inc.com" },
 ]
 requires-python = ">=3.10"
 dependencies = [
