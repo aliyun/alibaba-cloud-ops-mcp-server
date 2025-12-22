@@ -192,7 +192,7 @@ def find_bucket_by_tag(client: oss.Client, tag_key: str, tag_value: str) -> Opti
     return buckets[0] if buckets else None
 
 
-def get_or_create_bucket_for_code_deploy(application_name: str, region_id: str) -> str:
+def get_or_create_bucket_for_code_deploy(application_name: str) -> str:
     """
     Obtain or create an OSS bucket for code deployment
 
@@ -206,17 +206,14 @@ def get_or_create_bucket_for_code_deploy(application_name: str, region_id: str) 
     """
     tag_key = 'app_management'
     tag_value = 'code_deploy'
-    client = create_oss_client(region_id=region_id)
+    client = create_oss_client(region_id='cn-hangzhou')
 
     found_bucket = find_bucket_by_tag(client, tag_key, tag_value)
     if found_bucket:
         logger.info(f"[code_deploy] Found existing bucket by tag: {found_bucket}")
         return found_bucket
 
-    safe_app_name = application_name.lower().replace('_', '-').replace(' ', '-')
-
-    safe_app_name = ''.join(c if c.isalnum() or c == '-' else '' for c in safe_app_name)
-    bucket_name = f'app-{safe_app_name}-code-deploy-{str(uuid.uuid4())[:8]}'
+    bucket_name = f'code-deploy-{str(uuid.uuid4())[:8]}'
 
     try:
         client.put_bucket(oss.PutBucketRequest(

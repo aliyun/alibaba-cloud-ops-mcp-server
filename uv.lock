@@ -116,12 +116,11 @@ wheels = [
 
 [[package]]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.9.12"
+version = "0.9.15"
 source = { editable = "." }
 dependencies = [
     { name = "alibabacloud-cms20190101" },
     { name = "alibabacloud-credentials" },
-    { name = "alibabacloud-credentials-api" },
     { name = "alibabacloud-ecs20140526" },
     { name = "alibabacloud-oos20190601" },
     { name = "alibabacloud-oss-v2" },
@@ -140,7 +139,6 @@ dev = [
 requires-dist = [
     { name = "alibabacloud-cms20190101", specifier = ">=3.1.4" },
     { name = "alibabacloud-credentials", specifier = ">=1.0.3" },
-    { name = "alibabacloud-credentials-api", specifier = "==1.0.1" },
     { name = "alibabacloud-ecs20140526", specifier = ">=6.1.0" },
     { name = "alibabacloud-oos20190601", specifier = ">=3.5.0" },
     { name = "alibabacloud-oss-v2", specifier = ">=1.1.0" },

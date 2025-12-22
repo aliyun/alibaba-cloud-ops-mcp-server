@@ -1,4 +1,7 @@
 import os
+import time
+
+from Tea.exceptions import UnretryableException
 from mcp.server.fastmcp import FastMCP, Context
 from pydantic import Field
 import logging
@@ -90,9 +93,9 @@ def create_client(service: str, region_id: str) -> OpenApiClient:
 
 # JSON array parameter of type String
 ECS_LIST_PARAMETERS = {
-    'HpcClusterIds', 'DedicatedHostClusterIds', 'DedicatedHostIds', 
-    'InstanceIds', 'DeploymentSetIds', 'KeyPairNames', 'SecurityGroupIds', 
-    'diskIds', 'repeatWeekdays', 'timePoints', 'DiskIds', 'SnapshotLinkIds', 
+    'HpcClusterIds', 'DedicatedHostClusterIds', 'DedicatedHostIds',
+    'InstanceIds', 'DeploymentSetIds', 'KeyPairNames', 'SecurityGroupIds',
+    'diskIds', 'repeatWeekdays', 'timePoints', 'DiskIds', 'SnapshotLinkIds',
     'EipAddresses', 'PublicIpAddresses', 'PrivateIpAddresses'
 }
 
@@ -109,7 +112,7 @@ def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
     method = 'POST' if api_meta.get('methods', ['post'])[0] == 'post' else 'GET'
     path = api_meta.get('path', '/')
     style = ApiMetaClient.get_service_style(service)
-    
+
     # Handling special parameter formats
     processed_parameters = parameters.copy()
     processed_parameters = {k: v for k, v in processed_parameters.items() if v is not None}
@@ -117,7 +120,7 @@ def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
         for param_name, param_value in parameters.items():
             if param_name in ECS_LIST_PARAMETERS and isinstance(param_value, list):
                 processed_parameters[param_name] = json.dumps(param_value)
-    
+
     req = open_api_models.OpenApiRequest(
         query=OpenApiUtilClient.query(processed_parameters)
     )
@@ -135,9 +138,31 @@ def _tools_api_call(service: str, api: str, parameters: dict, ctx: Context):
     logger.info(f'Call API Request: Service: {service} API: {api} Method: {method} Parameters: {processed_parameters}')
     client = create_client(service, processed_parameters.get('RegionId', 'cn-hangzhou'))
     runtime = util_models.RuntimeOptions()
-    resp = client.call_api(params, req, runtime)
-    logger.info(f'Call API Response: {resp}')
-    return resp
+    
+    max_retries = 3
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        try:
+            resp = client.call_api(params, req, runtime)
+            logger.info(f'Call API Response: {resp}')
+            return resp
+        except UnretryableException as e:
+            last_exception = e
+            error_msg = str(e)
+            has_bad_fd = '[Errno 9] Bad file descriptor' in error_msg
+            
+            if has_bad_fd and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 0.5
+                logger.warning(f'[_tools_api_call] UnretryableException with [Errno 9] Bad file descriptor (attempt {attempt + 1}/{max_retries}), retrying after {wait_time}s: {e}')
+                time.sleep(wait_time)
+            else:
+                logger.error(f'Call API Error: {e}')
+                raise e
+
+    if last_exception:
+        logger.error(f'[_tools_api_call] All retries failed, raising last exception: {last_exception}')
+        raise last_exception
 
 
 def _create_parameter_schema(fields: dict):
