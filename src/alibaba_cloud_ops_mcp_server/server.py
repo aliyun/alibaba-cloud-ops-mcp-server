@@ -80,7 +80,13 @@ SUPPORTED_SERVICES_MAP = {
     default="domestic",
     help="Environment type: 'domestic' for domestic, 'international' for overseas (default: domestic)",
 )
-def main(transport: str, port: int, host: str, services: str, headers_credential_only: bool, env: str):
+@click.option(
+    "--code-deploy",
+    is_flag=True,
+    default=False,
+    help="Enable code deploy mode, only load 6 specific tools: OOS_CodeDeploy, OOS_GetDeployStatus, OOS_GetLastDeploymentInfo, LOCAL_ListDirectory, LOCAL_RunShellScript, LOCAL_AnalyzeDeployStack",
+)
+def main(transport: str, port: int, host: str, services: str, headers_credential_only: bool, env: str, code_deploy: bool):
     _setup_logging()
     # Create an MCP server
     mcp = FastMCP(
@@ -152,23 +158,46 @@ def main(transport: str, port: int, host: str, services: str, headers_credential
         settings.headers_credential_only = headers_credential_only
     if env:
         settings.env = env
-    if services:
-        service_keys = [s.strip().lower() for s in services.split(",")]
-        service_list = [(key, SUPPORTED_SERVICES_MAP.get(key, key)) for key in service_keys]
-        set_custom_service_list(service_list)
-        for tool in common_api_tools.tools:
+    if code_deploy:
+        # Code deploy mode: only load 6 specific tools
+        code_deploy_tools = {
+            'OOS_CodeDeploy',
+            'OOS_GetDeployStatus',
+            'OOS_GetLastDeploymentInfo',
+            'ECS_DescribeInstances',
+            'LOCAL_ListDirectory',
+            'LOCAL_RunShellScript',
+            'LOCAL_AnalyzeDeployStack'
+        }
+        
+        # Load from application_management_tools
+        for tool in application_management_tools.tools:
+            if tool.__name__ in code_deploy_tools:
+                mcp.tool(tool)
+        
+        # Load from local_tools
+        for tool in local_tools.tools:
+            if tool.__name__ in code_deploy_tools:
+                mcp.tool(tool)
+    else:
+        # Normal mode: load all tools
+        if services:
+            service_keys = [s.strip().lower() for s in services.split(",")]
+            service_list = [(key, SUPPORTED_SERVICES_MAP.get(key, key)) for key in service_keys]
+            set_custom_service_list(service_list)
+            for tool in common_api_tools.tools:
+                mcp.tool(tool)
+        for tool in oos_tools.tools:
             mcp.tool(tool)
-    for tool in oos_tools.tools:
-        mcp.tool(tool)
-    for tool in application_management_tools.tools:
-        mcp.tool(tool)
-    for tool in cms_tools.tools:
-        mcp.tool(tool)
-    for tool in oss_tools.tools:
-        mcp.tool(tool)
-    api_tools.create_api_tools(mcp, config)
-    for tool in local_tools.tools:
-        mcp.tool(tool)
+        for tool in application_management_tools.tools:
+            mcp.tool(tool)
+        for tool in cms_tools.tools:
+            mcp.tool(tool)
+        for tool in oss_tools.tools:
+            mcp.tool(tool)
+        api_tools.create_api_tools(mcp, config)
+        for tool in local_tools.tools:
+            mcp.tool(tool)
 
     # Initialize and run the server
     logger.debug(f'mcp server is running on {transport} mode.')

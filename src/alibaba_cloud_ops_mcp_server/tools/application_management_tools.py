@@ -5,7 +5,7 @@ from alibaba_cloud_ops_mcp_server.tools.api_tools import _tools_api_call
 from pathlib import Path
 
 from pydantic import Field
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import json
 import time
 from alibabacloud_oos20190601.client import Client as oos20190601Client
@@ -47,13 +47,9 @@ def OOS_CodeDeploy(
         name: str = Field(description='name of the application'),
         deploy_region_id: str = Field(description='Region ID for deployment'),
         application_group_name: str = Field(description='name of the application group'),
-        region_id_oss: str = Field(description='OSS region ID'),
         object_name: str = Field(description='OSS object name'),
         file_path: str = Field(description='Local file path to upload. If the file is not in '
                                            '.code_deploy/release directory, it will be copied there.'),
-        is_internal_oss: bool = Field(description='Whether to download OSS files through internal network. Note: '
-                                                  'If you choose internal network download, you must ensure that '
-                                                  'the ECS to be deployed and OSS are in the same region.'),
         application_start: str = Field(
             description='Application start command script. IMPORTANT: If the uploaded artifact '
                         'is a tar archive or compressed package (e.g., .tar, .tar.gz, .zip), '
@@ -78,7 +74,7 @@ def OOS_CodeDeploy(
 
 ):
     """
-    通过应用管理 API 部署应用到 ECS 实例。
+    部署应用到阿里云ECS实例。
 
     完整部署流程（在调用此工具之前）：
 
@@ -242,7 +238,8 @@ def OOS_CodeDeploy(
         file_path = str(release_path_resolved)
     else:
         logger.info(f"[code_deploy] File already in release directory: {file_path}")
-
+    region_id_oss = 'cn-hangzhou'
+    is_internal_oss = True if deploy_region_id.lower() == 'cn-hangzhou' else False
     # Log input parameters
     logger.info(f"[code_deploy] Input parameters: name={name}, deploy_region_id={deploy_region_id}, "
                 f"application_group_name={application_group_name}, instance_ids={instance_ids}, "
@@ -250,7 +247,7 @@ def OOS_CodeDeploy(
                 f"is_internal_oss={is_internal_oss}, port={port}")
 
     # Upload file to OSS
-    bucket_name = get_or_create_bucket_for_code_deploy(name, region_id_oss)
+    bucket_name = get_or_create_bucket_for_code_deploy(name)
     logger.info(f"[code_deploy] Auto selected/created bucket: {bucket_name}")
 
     put_object_resp = oss_tools.OSS_PutObject(
@@ -376,6 +373,30 @@ def OOS_GetDeployStatus(
     client = create_client(region_id=APPLICATION_MANAGEMENT_REGION_ID)
     response = _list_application_group_deployment(client, name, application_group_name, END_STATUSES)
     logger.info(f"[GetDeployStatus] Response: {json.dumps(str(response), ensure_ascii=False)}")
+    return response
+
+
+@_append_tool
+def ECS_DescribeInstances(
+        instance_ids: List[str] = Field(description='AlibabaCloud ECS instance ID List (required)'),
+        region_id: str = Field(description='AlibabaCloud region ID', default='cn-hangzhou'),
+):
+    """
+    查询指定ECS实例的详细信息。此工具要求必须提供实例ID列表，避免随意查询所有实例。
+    注意：此工具仅用于查询用户明确指定的实例信息，不允许用于扫描或枚举所有实例。
+    """
+    logger.info(f"[ECS_DescribeInstances] Input parameters: region_id={region_id}, instance_ids={instance_ids}")
+    
+    if not instance_ids:
+        raise ValueError("instance_ids is required and cannot be empty")
+    
+    describe_instances_request = ecs_20140526_models.DescribeInstancesRequest(
+        region_id=region_id,
+        instance_ids=json.dumps(instance_ids)
+    )
+    
+    response = _describe_instances_with_retry(region_id, describe_instances_request)
+    logger.info(f"[ECS_DescribeInstances] Response: {json.dumps(str(response), ensure_ascii=False)}")
     return response
 
 
