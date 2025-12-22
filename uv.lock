@@ -121,6 +121,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alibabacloud-cms20190101" },
     { name = "alibabacloud-credentials" },
+    { name = "alibabacloud-credentials-api" },
     { name = "alibabacloud-ecs20140526" },
     { name = "alibabacloud-oos20190601" },
     { name = "alibabacloud-oss-v2" },
@@ -138,7 +139,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alibabacloud-cms20190101", specifier = ">=3.1.4" },
-    { name = "alibabacloud-credentials", specifier = ">=1.0.0" },
+    { name = "alibabacloud-credentials", specifier = ">=1.0.3" },
+    { name = "alibabacloud-credentials-api", specifier = "==1.0.1" },
     { name = "alibabacloud-ecs20140526", specifier = ">=6.1.0" },
     { name = "alibabacloud-oos20190601", specifier = ">=3.4.1" },
     { name = "alibabacloud-oss-v2", specifier = ">=1.1.0" },
@@ -170,7 +172,7 @@ wheels = [
 
 [[package]]
 name = "alibabacloud-credentials"
-version = "1.0.0"
+version = "1.0.4"
 source = { registry = "http://yum.tbsite.net/pypi/simple/" }
 dependencies = [
     { name = "aiofiles" },
@@ -178,15 +180,18 @@ dependencies = [
     { name = "alibabacloud-tea" },
     { name = "apscheduler" },
 ]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/40/82/166f4cd5c529648cbd15832053d8ada0662bf9c8d4224a9fd74922cfec5d/alibabacloud-credentials-1.0.0.tar.gz", hash = "sha256:ae348e04551f6d73f6a4611896ac3c2be03821f1ed9c2e0316d7169945845e24" }
+sdist = { url = "http://yum.tbsite.net/pypi/packages/98/7b/022d86b8487bbf037685d631cb86bcee75346d514e0e5821f221102cd7ac/alibabacloud_credentials-1.0.4.tar.gz", hash = "sha256:2b71ab30745267abd524d64fbe063f7e02649da2ab6daaf1eec05733b7f9c8f1" }
+wheels = [
+    { url = "http://yum.tbsite.net/pypi/packages/fb/96/71fecdfd1c91a12072bd1eb143ef289eb72ddfa5cfa45306afbc6a7bd3ca/alibabacloud_credentials-1.0.4-py3-none-any.whl", hash = "sha256:62b1ed768a391029777112a104c848534637af222bdb584c46b89ada4d4538dc" },
+]
 
 [[package]]
 name = "alibabacloud-credentials-api"
-version = "1.0.0"
+version = "1.0.1"
 source = { registry = "http://yum.tbsite.net/aliyun-pypi/simple/" }
-sdist = { url = "http://yum.tbsite.net/aliyun-pypi/packages/alibabacloud-credentials-api/alibabacloud-credentials-api-1.0.0.tar.gz", hash = "sha256:7d74e339d033c584f74dca2d4859b3c6046cf1ced22c88fe7adcac685e4390af" }
+sdist = { url = "http://yum.tbsite.net/aliyun-pypi/packages/alibabacloud-credentials-api/alibabacloud-credentials-api-1.0.1.tar.gz", hash = "sha256:045b74b4d6b340287f9d4647f855c0c61cbd691b7c0cfee77b8db6d3fce229cf" }
 wheels = [
-    { url = "http://yum.tbsite.net/aliyun-pypi/packages/alibabacloud-credentials-api/alibabacloud_credentials_api-1.0.0-py3-none-any.whl", hash = "sha256:6a3400dfe7dd855c5444281bfc6e87f0d1e4074edeecea613680bca561fa143b" },
+    { url = "http://yum.tbsite.net/aliyun-pypi/packages/alibabacloud-credentials-api/alibabacloud_credentials_api-1.0.1-py3-none-any.whl", hash = "sha256:cea6cf0a64c90176e812eec26e074063f8c0a38b0c7c00ef59c64e58105ee2e8" },
 ]
 
 [[package]]
