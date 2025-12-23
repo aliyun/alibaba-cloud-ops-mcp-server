@@ -89,13 +89,11 @@ def OOS_CodeDeploy(
     - 记录文件路径，留待后续CodeDeploy使用
 
     步骤 3：调用此工具进行部署
-    - 此工具会依次调用：CreateApplication（如果不存在）、CreateApplicationGroup（如果不存在）、
-      TagResources（可选，如果是已有资源需要打 tag 导入应用分组）、DeployApplicationGroup
 
     重要提示：
     1. 启动脚本（application_start）必须与上传的产物对应。如果产物是压缩包（tar、tar.gz、zip等），
        需要先解压并进入对应目录后再执行启动命令。
-    2. 示例：如果上传的是 app.tar.gz，启动脚本应该类似，一般压缩包就在当前目录下，直接解压即可：
+    2. 示例：如果上传的是 app.tar.gz，启动脚本应该类似，一般压缩包就在当前目录下，直接解压即可，不要盲目cd，使用前务必确认对应文件和路径存在：
        "tar -xzf app.tar.gz && ./start.sh"
        或者如果解压后是Java应用：
        "tar -xzf app.tar.gz && java -jar app.jar"
@@ -311,6 +309,8 @@ def OOS_CodeDeploy(
         'security_group_link': security_group_link,
         'port': port,
         'deploy_region_id': deploy_region_id,
+        'bucket_name': bucket_name,
+        'oss_bucket_link': f'https://oss.console.aliyun.com/bucket/oss-cn-hangzhou/{bucket_name}/object',
         'security_group_instructions': f'''
             ## Deployment Successful!
             

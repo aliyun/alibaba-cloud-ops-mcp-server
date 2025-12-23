@@ -190,7 +190,9 @@ def main(transport: str, port: int, host: str, services: str, headers_credential
         for tool in oos_tools.tools:
             mcp.tool(tool)
         for tool in application_management_tools.tools:
-            mcp.tool(tool)
+            # Skip ECS_DescribeInstances in normal mode
+            if tool.__name__ != 'ECS_DescribeInstances':
+                mcp.tool(tool)
         for tool in cms_tools.tools:
             mcp.tool(tool)
         for tool in oss_tools.tools:
