@@ -151,7 +151,7 @@ def OOS_CodeDeploy(
             logger.info(f"[code_deploy] Using file directory as project path: {file_path_resolved.parent}")
     
     # Check ECS instance ID
-    if not instance_ids or len(instance_ids) == 0:
+    if not instance_ids:
         ecs_purchase_link = f'https://ecs-buy.aliyun.com/ecs#/custom/prepay/{deploy_region_id}?orderSource=buyWizard-console-list'
         security_group_link = f'https://ecs.console.aliyun.com/securityGroup?regionId={deploy_region_id}'
         port_info = f'port {port}' if port else 'application port'
@@ -548,7 +548,7 @@ def _check_ecs_instances_exist(deploy_region_id: str, instance_ids: list) -> Tup
     response = _describe_instances_with_retry(deploy_region_id, describe_instances_request)
     
     existing_instance_ids = set()
-    if response.body and response.body.instances:
+    if response.body and response.body.instances and response.body.instances.instance:
         for instance in response.body.instances.instance:
             if instance.instance_id:
                 existing_instance_ids.add(instance.instance_id)
@@ -579,7 +579,7 @@ def _check_instance_has_tag(deploy_region_id: str, instance_id: str, tag_key: st
         response = _describe_instances_with_retry(deploy_region_id, describe_instances_request)
         if response.body and response.body.instances and response.body.instances.instance:
             instance = response.body.instances.instance[0]
-            if instance.tags and instance.tags.tag:
+            if instance.tags and instance.tags.tag is not None:
                 for tag in instance.tags.tag:
                     if tag.tag_key == tag_key and tag.tag_value == tag_value:
                         logger.info(f"[_check_instance_has_tag] Instance {instance_id} already has tag {tag_key}={tag_value}")
@@ -631,7 +631,7 @@ def _ensure_instances_tagged(deploy_region_id: str, name: str, application_group
 
 def _tag_multiple_instances(deploy_region_id, name, application_group_name, instance_ids):
     """
-    为多个实例打 tag（已废弃，使用 _ensure_instances_tagged 代替）
+    为多个实例打 tag
     """
     remaining_instance_ids = instance_ids[1:]
     if remaining_instance_ids:
