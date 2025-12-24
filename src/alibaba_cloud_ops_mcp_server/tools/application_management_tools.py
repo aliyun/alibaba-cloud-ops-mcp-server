@@ -3,7 +3,7 @@ import logging
 
 from alibaba_cloud_ops_mcp_server.tools.api_tools import _tools_api_call
 from pathlib import Path
-
+import alibabacloud_oss_v2 as oss
 from pydantic import Field
 from typing import Optional, Tuple, List
 import json
@@ -61,7 +61,8 @@ def OOS_CodeDeploy(
                         'directory, and then run the start command (e.g., "java -jar app.jar" '
                         'or "./start.sh"). Ensure the start command matches the actual '
                         'executable or script in the extracted artifact to avoid deployment '
-                        'failures.'),
+                        'failures. Do not blindly use the `cd` command; always verify that the corresponding file '
+                        'and path exist before using it.'),
         application_stop: str = Field(description='Application stop command script'),
         deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
@@ -245,8 +246,24 @@ def OOS_CodeDeploy(
                 f"is_internal_oss={is_internal_oss}, port={port}")
 
     # Upload file to OSS
-    bucket_name = get_or_create_bucket_for_code_deploy(name)
-    logger.info(f"[code_deploy] Auto selected/created bucket: {bucket_name}")
+    try:
+        bucket_name = get_or_create_bucket_for_code_deploy(name)
+        logger.info(f"[code_deploy] Auto selected/created bucket: {bucket_name}")
+    except oss.exceptions.OperationError as e:
+        oss_console_link = 'https://oss.console.aliyun.com/'
+        return {
+            'error': 'OSS_SERVICE_NOT_ACTIVATED',
+            'message': '用户的阿里云OSS服务未开通，需要点击链接进行开通',
+            'oss_console_link': oss_console_link,
+            'instructions': f'''
+                ## OSS服务未开通
+                
+                您的阿里云OSS服务尚未开通，请点击以下链接进行开通：
+                [{oss_console_link}]({oss_console_link})
+                
+                开通后，请重新尝试部署操作。
+            '''
+        }
 
     put_object_resp = oss_tools.OSS_PutObject(
         BucketName=bucket_name,

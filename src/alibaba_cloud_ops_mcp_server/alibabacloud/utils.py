@@ -231,6 +231,9 @@ def get_or_create_bucket_for_code_deploy(application_name: str) -> str:
         put_bucket_tagging(client, bucket_name, {tag_key: tag_value})
         logger.info(f"[code_deploy] Created new bucket: {bucket_name}")
         return bucket_name
+    except oss.exceptions.OperationError as e:
+        logger.info(f"[code_deploy] OperationError Failed to create bucket: {e}")
+        raise e
     except Exception as e:
         logger.info(f"[code_deploy] Failed to create bucket: {e}")
         raise e
