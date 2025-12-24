@@ -116,7 +116,7 @@ wheels = [
 
 [[package]]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.9.15"
+version = "0.9.16"
 source = { editable = "." }
 dependencies = [
     { name = "alibabacloud-cms20190101" },
@@ -141,7 +141,7 @@ requires-dist = [
     { name = "alibabacloud-credentials", specifier = ">=1.0.3" },
     { name = "alibabacloud-ecs20140526", specifier = ">=6.1.0" },
     { name = "alibabacloud-oos20190601", specifier = ">=3.5.0" },
-    { name = "alibabacloud-oss-v2", specifier = ">=1.1.0" },
+    { name = "alibabacloud-oss-v2", specifier = ">=1.2.0" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "fastmcp", specifier = "==2.8.0" },
     { name = "pydantic", specifier = "==2.11.3" },
@@ -249,14 +249,16 @@ sdist = { url = "http://yum.tbsite.net/pypi/packages/f6/50/5f41ab550d7874c623f6e
 
 [[package]]
 name = "alibabacloud-oss-v2"
-version = "1.1.0"
+version = "1.2.1"
 source = { registry = "http://yum.tbsite.net/pypi/simple/" }
 dependencies = [
     { name = "crcmod-plus" },
     { name = "pycryptodome" },
     { name = "requests" },
 ]
-sdist = { url = "http://yum.tbsite.net/pypi/packages/b3/04/2d70ca3b95f6b2321d877a7b5b8ed88d81167ae442755ba4db25b80fd559/alibabacloud-oss-v2-1.1.0.tar.gz", hash = "sha256:5d1a1e9f9e0eefb7b4a33eabb3e91050c05fc0de63a953f2a0bb3605faa80b2b" }
+wheels = [
+    { url = "http://yum.tbsite.net/pypi/packages/1e/b6/b551f910bab18f84250dbf70cded1e3d4cd30a997c4cf85fdfee275e4467/alibabacloud_oss_v2-1.2.1-py3-none-any.whl", hash = "sha256:a3080d3041f754a87c01944d9d1079e2e9910905d47c76142871d1fc4f63dd01" },
+]
 
 [[package]]
 name = "alibabacloud-tea"

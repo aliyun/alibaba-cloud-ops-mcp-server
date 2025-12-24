@@ -185,10 +185,15 @@ def put_bucket_tagging(client: oss.Client, bucket_name: str, tags: dict):
 def find_bucket_by_tag(client: oss.Client, tag_key: str, tag_value: str) -> Optional[str]:
     paginator = client.list_buckets_paginator(tag_key=tag_key, tag_value=tag_value)
     buckets = []
-    for page in paginator.iter_page(oss.ListBucketsRequest(tag_key=tag_key, tag_value=tag_value)):
-        for bucket in page.buckets:
-            buckets.append(bucket.name)
-    logger.info(f'[code_deploy] Trying to find bucket with tag {tag_key}:{tag_value}, buckets: {buckets}')
+    try:
+        for page in paginator.iter_page(oss.ListBucketsRequest(tag_key=tag_key, tag_value=tag_value)):
+            if not page.buckets:
+                continue
+            for bucket in page.buckets:
+                buckets.append(bucket.name)
+        logger.info(f'[code_deploy] Trying to find bucket with tag {tag_key}:{tag_value}, buckets: {buckets}')
+    except Exception as e:
+        logger.error(f'[code_deploy] Failed to list buckets: {e}')
     return buckets[0] if buckets else None
 
 
