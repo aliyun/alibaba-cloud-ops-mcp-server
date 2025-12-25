@@ -63,7 +63,9 @@ def OOS_CodeDeploy(
                         'executable or script in the extracted artifact to avoid deployment '
                         'failures. Do not blindly use the `cd` command; always verify that the corresponding file '
                         'and path exist before using it.'),
-        application_stop: str = Field(description='Application stop command script'),
+        application_stop: str = Field(description='Application stop command script, Defensive stop command - checks if '
+                                                  'the service exists and if the CD path exists, preventing errors '
+                                                  'caused by blindly using `cd` or due to non-existent commands.'),
         deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
         project_path: Optional[str] = Field(description='Root path of the project. The .code_deploy '
@@ -82,7 +84,7 @@ def OOS_CodeDeploy(
     步骤 1：识别部署方式
     - 通过本地文件操作工具读取项目文件（package.json、requirements.txt、pom.xml 等）
     - 识别项目的部署方式和技术栈（npm、python、java、go 等）,项目的部署语言可以作为参数：deploy_language 传入
-    - 生成构建命令，注意，该构建命令不需要生成构建脚本，不要因此新增sh文件，任何情况下都不要，因为构建命令是CodeDeploy的参数，不需要生成文件
+    - 生成构建命令，注意，该构建命令不需要生成构建命令，不要因此新增sh文件，任何情况下都不要，因为构建命令是CodeDeploy的参数，不需要生成文件
 
     步骤 2：构建或压缩文件，并记录文件路径
     - 在本地执行构建命令，生成部署产物（tar.gz、zip 等压缩包）
@@ -92,13 +94,47 @@ def OOS_CodeDeploy(
     步骤 3：调用此工具进行部署
 
     重要提示：
-    1. 启动脚本（application_start）必须与上传的产物对应。如果产物是压缩包（tar、tar.gz、zip等），
+    1. 启动命令（application_start）和停止命令必须采用防御性编程策略，确保每一步操作都经过验证，避免因路径不存在、命令缺失等问题导致部署失败。
+
+        关键要求
+        1. 压缩包处理规范
+        如果产物是压缩包（tar、tar.gz、zip等），必须先解压再执行启动命令
+        解压前应验证压缩包文件存在
+        使用非交互式解压命令（如 unzip -o、tar -xzf）避免需要用户确认
+
+        # 正确示例 - 带防御性检查
+        [ -f app.tar.gz ] && tar -xzf app.tar.gz || { echo "压缩包不存在"; exit 1; }
+        [ -f start.sh ] && chmod +x start.sh && nohup ./start.sh > /root/app.log 2>&1 & || { echo "启动脚本不存在"; exit 1; }
+
+        # 错误示例 - 无检查直接执行
+        cd /var/www/html  # 如果目录不存在会失败
+        ./start.sh        # 如果文件不存在会失败
+
+        # 防御性停止命令 - 检查服务是否存在
+        if systemctl list-units --full --all | grep -q "nginx.service"; then
+            systemctl stop nginx
+        elif systemctl list-units --full --all | grep -q "apache2.service"; then
+            systemctl stop apache2
+        elif systemctl list-units --full --all | grep -q "httpd.service"; then
+            systemctl stop httpd
+        fi
+
+        # 或者通过进程名停止
+        pkill -f "node.*app.js" || true
+        pkill -f "java.*app.jar" || true
+
+        # 检查命令是否存在
+        command -v npm >/dev/null 2>&1 || { echo "npm未安装"; exit 1; }
+        command -v java >/dev/null 2>&1 || { echo "java未安装"; exit 1; }
+        command -v python >/dev/null 2>&1 || { echo "python未安装"; exit 1; }
+
+    2. 启动命令（application_start）必须与上传的产物对应。如果产物是压缩包（tar、tar.gz、zip等），
        需要先解压并进入对应目录后再执行启动命令。
-    2. 示例：如果上传的是 app.tar.gz，启动脚本应该类似，一般压缩包就在当前目录下，直接解压即可，不要盲目cd，使用前务必确认对应文件和路径存在：
+    3. 示例：如果上传的是 app.tar.gz，启动命令应该类似，一般压缩包就在当前目录下，直接解压即可，未经确认路径是否存在，禁止使用cd，使用前务必确认对应文件和路径存在：
        "tar -xzf app.tar.gz && ./start.sh"
        或者如果解压后是Java应用：
        "tar -xzf app.tar.gz && java -jar app.jar"
-    3. 确保启动命令能够正确找到并执行解压后的可执行文件或脚本，避免部署失败。启动命令应该将程序运行在后台并打印日志到指定文件，
+    4. 确保启动命令能够正确找到并执行解压后的可执行文件或命令，避免部署失败。启动命令应该将程序运行在后台并打印日志到指定文件，
         注意使用非交互式命令，比如unzip -o等自动覆盖的命令，无需交互
     例如：
        - npm 程序示例：
@@ -318,7 +354,11 @@ def OOS_CodeDeploy(
     }
     save_application_info(deploy_info)
     service_link = f'https://ecs.console.aliyun.com/app/detail?tabKey=overview&appName={name}&groupName={application_group_name}'
-    security_group_link = f'https://ecs.console.aliyun.com/securityGroup?regionId={deploy_region_id}'
+    instance_id = instance_ids[0] if instance_ids else None
+    if instance_id:
+        security_group_link = f'https://ecs.console.aliyun.com/server/{instance_id}/group?regionId={deploy_region_id}#/'
+    else:
+        security_group_link = f'https://ecs.console.aliyun.com/securityGroup/region/{deploy_region_id}'
 
     return {
         'response': response,
