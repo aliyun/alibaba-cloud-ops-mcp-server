@@ -63,7 +63,9 @@ def OOS_CodeDeploy(
                         'executable or script in the extracted artifact to avoid deployment '
                         'failures. Do not blindly use the `cd` command; always verify that the corresponding file '
                         'and path exist before using it.'),
-        application_stop: str = Field(description='Application stop command script'),
+        application_stop: str = Field(description='Application stop command script, Defensive stop command - checks if '
+                                                  'the service exists and if the CD path exists, preventing errors '
+                                                  'caused by blindly using `cd` or due to non-existent commands.'),
         deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
         project_path: Optional[str] = Field(description='Root path of the project. The .code_deploy '
@@ -75,47 +77,46 @@ def OOS_CodeDeploy(
 
 ):
     """
-    部署应用到阿里云ECS实例。
+    将应用部署到阿里云ECS实例。使用阿里云OOS（运维编排服务）的CodeDeploy功能实现自动化部署。
 
-    完整部署流程（在调用此工具之前）：
+    ## 前置条件（调用此工具前需完成）
 
-    步骤 1：识别部署方式
-    - 通过本地文件操作工具读取项目文件（package.json、requirements.txt、pom.xml 等）
-    - 识别项目的部署方式和技术栈（npm、python、java、go 等）,项目的部署语言可以作为参数：deploy_language 传入
-    - 生成构建命令，注意，该构建命令不需要生成构建脚本，不要因此新增sh文件，任何情况下都不要，因为构建命令是CodeDeploy的参数，不需要生成文件
+    1. **识别项目类型**：读取项目配置文件（package.json、pom.xml、requirements.txt等），确定技术栈和部署语言（通过deploy_language参数传入）
+    2. **构建部署产物**：执行构建命令生成压缩包（tar.gz、zip等），保存到 `.code_deploy/release` 目录
+    3. **准备ECS实例**：确保目标ECS实例已创建，获取实例ID列表
 
-    步骤 2：构建或压缩文件，并记录文件路径
-    - 在本地执行构建命令，生成部署产物（tar.gz、zip 等压缩包）
-    - 将构建产物保存到 .code_deploy/release 目录下
-    - 记录文件路径，留待后续CodeDeploy使用
+    ## 核心要求
 
-    步骤 3：调用此工具进行部署
+    ### 1. 防御性命令设计（必须）
+    启动和停止命令必须包含存在性检查，避免因路径/文件/命令不存在导致失败：
+    - 压缩包：先检查文件存在再解压 `[ -f app.tar.gz ] && tar -xzf app.tar.gz || exit 1`
+    - 可执行文件：检查文件存在再执行 `[ -f start.sh ] && chmod +x start.sh && ./start.sh || exit 1`
+    - 命令可用性：检查命令是否存在 `command -v npm >/dev/null 2>&1 || exit 1`
+    - 禁止直接使用 `cd`，必须先验证路径存在
 
-    重要提示：
-    1. 启动脚本（application_start）必须与上传的产物对应。如果产物是压缩包（tar、tar.gz、zip等），
-       需要先解压并进入对应目录后再执行启动命令。
-    2. 示例：如果上传的是 app.tar.gz，启动脚本应该类似，一般压缩包就在当前目录下，直接解压即可，不要盲目cd，使用前务必确认对应文件和路径存在：
-       "tar -xzf app.tar.gz && ./start.sh"
-       或者如果解压后是Java应用：
-       "tar -xzf app.tar.gz && java -jar app.jar"
-    3. 确保启动命令能够正确找到并执行解压后的可执行文件或脚本，避免部署失败。启动命令应该将程序运行在后台并打印日志到指定文件，
-        注意使用非交互式命令，比如unzip -o等自动覆盖的命令，无需交互
-    例如：
-       - npm 程序示例：
-         "tar -xzf app.tar.gz  && nohup npm start > /root/app.log 2>&1 &"
-         或者分别输出标准输出和错误日志：
-         "tar -xzf app.tar.gz && nohup npm start > /root/app.log 2> /root/app.error.log &"
-       - Java 程序示例：
-         "tar -xzf app.tar.gz && nohup java -jar app.jar > /root/app.log 2>&1 &"
-       - Python 程序示例：
-         "tar -xzf app.tar.gz && nohup python app.py > /root/app.log 2>&1 &"
-       说明：使用 nohup 命令可以让程序在后台运行，即使终端关闭也不会终止；> 重定向标准输出到日志文件；2>&1 将标准错误也重定向到同一文件；& 符号让命令在后台执行。
-    4. 应用和应用分组会自动检查是否存在，如果存在则跳过创建，避免重复创建错误。
-    5. 如果未提供 ECS 实例 ID，工具会返回提示信息，引导用户到 ECS 控制台创建实例。
-    6. 部署完成后，部署信息会保存到项目根目录下的 .code_deploy/.application.json 文件中。
-    7. project_path 参数用于指定项目根目录，.code_deploy 目录将在此路径下创建。如果不提供，将尝试从 file_path 推断或使用当前工作目录。
+    ### 2. 压缩包处理规范（必须）
+    如果产物是压缩包，启动命令必须先解压：
+    - 使用非交互式命令：`tar -xzf`、`unzip -o`（自动覆盖，无需确认）
+    - 解压后执行启动命令，确保路径对应
+    - 示例：`tar -xzf app.tar.gz && nohup java -jar app.jar > /root/app.log 2>&1 &`
 
-    创建完成后，你应该以markdown的形式向用户展示你获取的service link，方便用户跳转
+    ### 3. 后台运行与日志（必须）
+    启动命令必须使用后台运行并重定向日志：
+    - 格式：`nohup <command> > /root/app.log 2>&1 &`
+    - 说明：nohup保持后台运行，`>` 重定向标准输出，`2>&1` 合并错误输出，`&` 后台执行
+
+    ### 4. 停止命令规范
+    停止命令需检查服务/进程是否存在：
+    - systemctl服务：`systemctl list-units | grep -q "service" && systemctl stop service`
+    - 进程名：`pkill -f "process_pattern" || true`
+
+    ## 注意事项
+
+    - 应用和应用分组会自动检查，已存在则跳过创建
+    - 未提供ECS实例ID时，工具会返回创建引导链接
+    - 部署信息自动保存到 `.code_deploy/.application.json`
+    - project_path未提供时，会从file_path推断或使用当前目录
+    - 部署完成后，以markdown格式展示service_link供用户跳转
     """
     # Set project path if provided
     if project_path:
@@ -318,7 +319,11 @@ def OOS_CodeDeploy(
     }
     save_application_info(deploy_info)
     service_link = f'https://ecs.console.aliyun.com/app/detail?tabKey=overview&appName={name}&groupName={application_group_name}'
-    security_group_link = f'https://ecs.console.aliyun.com/securityGroup?regionId={deploy_region_id}'
+    instance_id = instance_ids[0] if instance_ids else None
+    if instance_id:
+        security_group_link = f'https://ecs.console.aliyun.com/server/{instance_id}/group?regionId={deploy_region_id}#/'
+    else:
+        security_group_link = f'https://ecs.console.aliyun.com/securityGroup/region/{deploy_region_id}'
 
     return {
         'response': response,
