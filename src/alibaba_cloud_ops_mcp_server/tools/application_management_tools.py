@@ -672,8 +672,27 @@ def _list_application_group_deployment(client, name, application_group_name, sta
     )
     response = client.get_application_group(get_application_group_request)
     status = response.body.application_group.status
-    if status in status_list:
-        return response.body
+    execution_id = response.body.application_group.execution_id
+    list_executions_response = None
+
+    if execution_id:
+        try:
+            list_executions_request = oos_20190601_models.ListExecutionsRequest(
+                execution_id=execution_id
+            )
+            list_executions_response = client.list_executions(list_executions_request)
+        except Exception as e:
+            logger.info(f"[_list_application_group_deployment] Error listing executions for application group {application_group_name}: {e}")
+            pass
+
+    resp = {
+        'info': response.body,
+        'status': status,
+        'execution_id': execution_id,
+        'deploy_execution_info': list_executions_response.body if list_executions_response else None
+    }
+
+    return resp
 
 
 def _check_application_exists(client: oos20190601Client, name: str) -> bool:
