@@ -1,5 +1,5 @@
 version = 1
-revision = 1
+revision = 3
 requires-python = ">=3.10"
 
 [[package]]
@@ -116,7 +116,7 @@ wheels = [
 
 [[package]]
 name = "alibaba-cloud-ops-mcp-server"
-version = "0.9.19"
+version = "0.9.25"
 source = { editable = "." }
 dependencies = [
     { name = "alibabacloud-cms20190101" },

@@ -6,6 +6,17 @@
 
 Alibaba Cloud Ops MCP Server is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides seamless integration with Alibaba Cloud APIs, enabling AI assistants to operate resources on Alibaba Cloud, supporting ECS, Cloud Monitor, OOS, OSS, VPC, RDS and other widely used cloud products. It also enables AI assistants to analyze, build, and deploy applications to Alibaba Cloud ECS instances.
 
+## MCP Maketplace Integration
+
+* [Qoder](https://qoder.com) <a href="qoder://aicoding.aicoding-deeplink/mcp/add?name=alibaba-cloud-ops-mcp-server&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnV2eCUyMiUyQyUyMmFyZ3MlMjIlM0ElNUIlMjJhbGliYWJhLWNsb3VkLW9wcy1tY3Atc2VydmVyJTQwbGF0ZXN0JTIyJTVEJTJDJTIyZW52JTIyJTNBJTdCJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEJTIyJTNBJTIyWW91ciUyMEFjY2VzcyUyMEtleSUyMElkJTIyJTJDJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCUyMiUzQSUyMllvdXIlMjBBY2Nlc3MlMjBLZXklMjBTRUNSRVQlMjIlN0QlN0Q%3D"><img src="./image/qoder.svg" alt="Install MCP Server" height="20"></a>
+* [Cursor](https://docs.cursor.com/tools) [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=alibaba-cloud-ops-mcp-server&config=eyJ0aW1lb3V0Ijo2MDAsImNvbW1hbmQiOiJ1dnggYWxpYmFiYS1jbG91ZC1vcHMtbWNwLXNlcnZlckBsYXRlc3QiLCJlbnYiOnsiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEIjoiWW91ciBBY2Nlc3MgS2V5IElkIiwiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCI6IllvdXIgQWNjZXNzIEtleSBTZWNyZXQifX0%3D)
+* [Cline](https://cline.bot/mcp-marketplace)
+* [ModelScope](https://www.modelscope.cn/mcp/servers/@aliyun/alibaba-cloud-ops-mcp-server?lang=en_US)
+* [Lingma](https://lingma.aliyun.com/)
+* [Smithery AI](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server)
+* [FC-Function AI](https://cap.console.aliyun.com/template-detail?template=237)
+* [Alibaba Cloud Model Studio](https://bailian.console.aliyun.com/?tab=mcp#/mcp-market/detail/alibaba-cloud-ops)
+
 ## Features
 
 - **ECS Management**: Create, start, stop, reboot, delete instances, run commands, view instances, regions, zones, images, security groups, and more
@@ -52,17 +63,6 @@ To use `alibaba-cloud-ops-mcp-server` MCP Server with any other MCP Client, you 
 ```
 
 [For detailed parameter description, see MCP startup parameter document](./README_mcp_args.md)
-
-## MCP Maketplace Integration
-
-* [Qoder](https://qoder.com) <a href="qoder://aicoding.aicoding-deeplink/mcp/add?name=alibaba-cloud-ops-mcp-server&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnV2eCUyMiUyQyUyMmFyZ3MlMjIlM0ElNUIlMjJhbGliYWJhLWNsb3VkLW9wcy1tY3Atc2VydmVyJTQwbGF0ZXN0JTIyJTVEJTJDJTIyZW52JTIyJTNBJTdCJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEJTIyJTNBJTIyWW91ciUyMEFjY2VzcyUyMEtleSUyMElkJTIyJTJDJTIyQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCUyMiUzQSUyMllvdXIlMjBBY2Nlc3MlMjBLZXklMjBTRUNSRVQlMjIlN0QlN0Q%3D"><img src="./image/qoder.svg" alt="Install MCP Server" height="20"></a>
-* [Cursor](https://docs.cursor.com/tools) [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=alibaba-cloud-ops-mcp-server&config=eyJ0aW1lb3V0Ijo2MDAsImNvbW1hbmQiOiJ1dnggYWxpYmFiYS1jbG91ZC1vcHMtbWNwLXNlcnZlckBsYXRlc3QiLCJlbnYiOnsiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX0lEIjoiWW91ciBBY2Nlc3MgS2V5IElkIiwiQUxJQkFCQV9DTE9VRF9BQ0NFU1NfS0VZX1NFQ1JFVCI6IllvdXIgQWNjZXNzIEtleSBTZWNyZXQifX0%3D)
-* [Cline](https://cline.bot/mcp-marketplace)
-* [ModelScope](https://www.modelscope.cn/mcp/servers/@aliyun/alibaba-cloud-ops-mcp-server?lang=en_US)
-* [Lingma](https://lingma.aliyun.com/)
-* [Smithery AI](https://smithery.ai/server/@aliyun/alibaba-cloud-ops-mcp-server)
-* [FC-Function AI](https://cap.console.aliyun.com/template-detail?template=237)
-* [Alibaba Cloud Model Studio](https://bailian.console.aliyun.com/?tab=mcp#/mcp-market/detail/alibaba-cloud-ops)
 
 ## Know More
 
