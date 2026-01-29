@@ -58,20 +58,15 @@ uv run src/alibaba_cloud_ops_mcp_server/server.py --env international --services
 ```json
 {
   "mcpServers": {
-    "alibabacloud": {
-      "command": "uv",
+    "alibaba-cloud-ops-mcp-server": {
+      "timeout": 600,
+      "command": "uvx",
       "args": [
-        "--directory",
-        "/path/to/alibabacloud-mcp-server",
-        "run",
-        "src/alibaba_cloud_ops_mcp_server/server.py",
-        "--extra-config",
-        "{\"sls\": [\"GetProject\", \"ListProject\"], \"ecs\": [\"StartInstance\"]}"
+        "alibaba-cloud-ops-mcp-server@latest"
       ],
       "env": {
-        "ALIBABA_CLOUD_ACCESS_KEY_ID": "您的 Access Key ID",
-        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "您的 Access Key Secret",
-        "ALIBABA_CLOUD_REGION": "cn-hangzhou"
+        "ALIBABA_CLOUD_ACCESS_KEY_ID": "Your Access Key ID",
+        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "Your Access Key SECRET"
       }
     }
   }

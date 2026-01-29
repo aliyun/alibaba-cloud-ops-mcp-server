@@ -58,20 +58,15 @@ You can configure these parameters in your MCP client's JSON configuration file:
 ```json
 {
   "mcpServers": {
-    "alibabacloud": {
-      "command": "uv",
+    "alibaba-cloud-ops-mcp-server": {
+      "timeout": 600,
+      "command": "uvx",
       "args": [
-        "--directory",
-        "/path/to/alibabacloud-mcp-server",
-        "run",
-        "src/alibaba_cloud_ops_mcp_server/server.py",
-        "--extra-config",
-        "{\"sls\": [\"GetProject\", \"ListProject\"], \"ecs\": [\"StartInstance\"]}"
+        "alibaba-cloud-ops-mcp-server@latest"
       ],
       "env": {
-        "ALIBABA_CLOUD_ACCESS_KEY_ID": "your-access-key-id",
-        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "your-access-key-secret",
-        "ALIBABA_CLOUD_REGION": "cn-hangzhou"
+        "ALIBABA_CLOUD_ACCESS_KEY_ID": "Your Access Key ID",
+        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "Your Access Key SECRET"
       }
     }
   }
