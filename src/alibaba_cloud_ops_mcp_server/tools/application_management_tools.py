@@ -234,37 +234,19 @@ def OOS_CodeDeploy(
         logger.info(f"[code_deploy] File already in release directory: {file_path}")
     
     # 如果未提供启动/停止命令，尝试通过规则引擎生成
-    logger.info(f"[DEBUG code_deploy] ===== Checking if commands need to be generated ======")
-    logger.info(f"[DEBUG code_deploy] application_start provided: {application_start is not None}, value: {application_start}")
-    logger.info(f"[DEBUG code_deploy] application_stop provided: {application_stop is not None}, value: {application_stop}")
-    
     if not application_start or not application_stop:
-        logger.info(f"[code_deploy] Attempting to generate commands by rules. "
-                   f"application_start provided: {application_start is not None}, "
-                   f"application_stop provided: {application_stop is not None}")
-        logger.info(f"[DEBUG code_deploy] Calling rule engine with: file_path={file_path}, deploy_language={deploy_language}")
+        logger.info(f"[code_deploy] Attempting to auto-generate commands using rule engine. "
+                   f"Provided: start={application_start is not None}, stop={application_stop is not None}")
         
         generated_start, generated_stop = _generate_start_stop_commands_by_rules(
             file_path, deploy_language, name, port
         )
         
-        logger.info(f"[DEBUG code_deploy] Rule engine returned: generated_start={generated_start is not None}, generated_stop={generated_stop is not None}")
-        if generated_start:
-            logger.info(f"[DEBUG code_deploy] Generated start command content: {generated_start}")
-        if generated_stop:
-            logger.info(f"[DEBUG code_deploy] Generated stop command content: {generated_stop}")
-        
         if not application_start and generated_start:
             application_start = generated_start
-            logger.info(f"[code_deploy] Auto-generated start command: {application_start}")
-            logger.info(f"[DEBUG code_deploy] Successfully assigned generated start command")
+            logger.info(f"[code_deploy] Auto-generated start command successfully")
         elif not application_start:
-            logger.warning(f"[code_deploy] Failed to generate start command by rules, "
-                          f"will require manual input or LLM generation")
-            logger.info(f"[DEBUG code_deploy] ===== START COMMAND GENERATION FAILED ======")
-            logger.info(f"[DEBUG code_deploy] file_path: {file_path}")
-            logger.info(f"[DEBUG code_deploy] deploy_language: {deploy_language}")
-            logger.info(f"[DEBUG code_deploy] generated_start: {generated_start}")
+            logger.warning(f"[code_deploy] Failed to generate start command automatically, manual input required")
             return {
                 'error': 'START_COMMAND_REQUIRED',
                 'message': '无法通过规则引擎自动生成启动命令，请手动提供 application_start 参数并再次调用OOS_CodeDeploy',
@@ -292,13 +274,9 @@ def OOS_CodeDeploy(
         
         if not application_stop and generated_stop:
             application_stop = generated_stop
-            logger.info(f"[code_deploy] Auto-generated stop command: {application_stop}")
-    else:
-        logger.info(f"[DEBUG code_deploy] Both commands provided, skipping rule engine")
+            logger.info(f"[code_deploy] Auto-generated stop command successfully")
     
-    logger.info(f"[DEBUG code_deploy] ===== Final command assignment ======")
-    logger.info(f"[DEBUG code_deploy] Final application_start: {application_start}")
-    logger.info(f"[DEBUG code_deploy] Final application_stop: {application_stop}")
+    logger.info(f"[code_deploy] Deployment commands ready - start: {bool(application_start)}, stop: {bool(application_stop)}")
     
     region_id_oss = 'cn-hangzhou'
     is_internal_oss = True if deploy_region_id.lower() == 'cn-hangzhou' else False
@@ -888,8 +866,6 @@ def _extract_top_level_dir(members: List[str]) -> Optional[str]:
         if parts[0]:
             top_level.add(parts[0])
     
-    logger.info(f"[DEBUG _extract_top_level_dir] Top-level items: {list(top_level)}")
-    
     if len(top_level) == 1:
         return list(top_level)[0]
     return None
@@ -908,7 +884,6 @@ def _analyze_deployment_file(file_path: str) -> Dict:
             'extracted_dir_name': Optional[str],  # 解压后的目录名（如果有）
         }
     """
-    logger.info(f"[DEBUG _analyze_deployment_file] Starting analysis for: {file_path}")
     file_path_obj = Path(file_path)
     
     if not file_path_obj.exists():
@@ -934,7 +909,8 @@ def _analyze_deployment_file(file_path: str) -> Dict:
                 members = tar.getnames()
                 result['files_in_archive'] = members
                 result['extracted_dir_name'] = _extract_top_level_dir(members)
-                logger.info(f"[DEBUG _analyze_deployment_file] tar.gz: {len(members)} files, extracted_dir: {result['extracted_dir_name']}")
+                logger.info(f"[_analyze_deployment_file] Analyzed tar.gz archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
         except Exception as e:
             logger.warning(f"[_analyze_deployment_file] Failed to read tar.gz: {e}")
     
@@ -946,7 +922,8 @@ def _analyze_deployment_file(file_path: str) -> Dict:
                 members = tar.getnames()
                 result['files_in_archive'] = members
                 result['extracted_dir_name'] = _extract_top_level_dir(members)
-                logger.info(f"[DEBUG _analyze_deployment_file] tar: {len(members)} files, extracted_dir: {result['extracted_dir_name']}")
+                logger.info(f"[_analyze_deployment_file] Analyzed tar archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
         except Exception as e:
             logger.warning(f"[_analyze_deployment_file] Failed to read tar: {e}")
     
@@ -958,13 +935,11 @@ def _analyze_deployment_file(file_path: str) -> Dict:
                 members = zip_ref.namelist()
                 result['files_in_archive'] = members
                 result['extracted_dir_name'] = _extract_top_level_dir(members)
-                logger.info(f"[DEBUG _analyze_deployment_file] zip: {len(members)} files, extracted_dir: {result['extracted_dir_name']}")
+                logger.info(f"[_analyze_deployment_file] Analyzed zip archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
         except Exception as e:
             logger.warning(f"[_analyze_deployment_file] Failed to read zip: {e}")
-    else:
-        logger.info(f"[DEBUG _analyze_deployment_file] Not a recognized archive type")
     
-    logger.info(f"[DEBUG _analyze_deployment_file] Result: {json.dumps(result, ensure_ascii=False, default=str)}")
     return result
 
 
@@ -984,8 +959,6 @@ def _find_executable_files(files_list: List[str], deploy_language: str) -> Dict[
             'dockerfile': Optional[str],
         }
     """
-    logger.info(f"[DEBUG _find_executable_files] Starting search in {len(files_list)} files for language: {deploy_language}")
-    
     result = {
         'jar_files': [],
         'py_files': [],
@@ -1003,18 +976,14 @@ def _find_executable_files(files_list: List[str], deploy_language: str) -> Dict[
         # Java
         if file_name.endswith('.jar'):
             result['jar_files'].append(file_path)
-            logger.info(f"[DEBUG _find_executable_files] Found JAR file: {file_path}")
         # Python
         elif file_name.endswith('.py'):
             result['py_files'].append(file_path)
-            logger.info(f"[DEBUG _find_executable_files] Found Python file: {file_path}")
         # Node.js
         elif file_name == 'package.json':
             result['package_json'] = file_path
-            logger.info(f"[DEBUG _find_executable_files] Found package.json: {file_path}")
         elif file_name.endswith('.js'):
             result['js_files'].append(file_path)
-            logger.info(f"[DEBUG _find_executable_files] Found JS file: {file_path}")
         # Go - 只在 golang 语言时查找潜在的二进制文件
         # 排除常见的非二进制文件（文档、配置等）
         elif deploy_language == 'golang':
@@ -1029,25 +998,20 @@ def _find_executable_files(files_list: List[str], deploy_language: str) -> Dict[
             has_extension = '.' in file_name and not file_name.startswith('.')
             if not has_extension and file_name_no_ext.lower() not in non_binary_names:
                 result['go_binaries'].append(file_path)
-                logger.info(f"[DEBUG _find_executable_files] Found potential Go binary: {file_path}")
         # Shell scripts
         elif file_name.endswith('.sh'):
             result['shell_scripts'].append(file_path)
-            logger.info(f"[DEBUG _find_executable_files] Found shell script: {file_path}")
         # Python requirements
         elif file_name == 'requirements.txt':
             result['requirements_txt'] = file_path
-            logger.info(f"[DEBUG _find_executable_files] Found requirements.txt: {file_path}")
         # Dockerfile
         elif file_name == 'dockerfile' and not file_path.lower().endswith('.dockerignore'):
             result['dockerfile'] = file_path
-            logger.info(f"[DEBUG _find_executable_files] Found Dockerfile: {file_path}")
     
-    logger.info(f"[DEBUG _find_executable_files] Search results: jar_files={len(result['jar_files'])}, "
-                f"py_files={len(result['py_files'])}, js_files={len(result['js_files'])}, "
-                f"go_binaries={len(result['go_binaries'])}, shell_scripts={len(result['shell_scripts'])}, "
-                f"package_json={result['package_json']}, requirements_txt={result['requirements_txt']}, "
-                f"dockerfile={result['dockerfile']}")
+    logger.info(f"[_find_executable_files] Found executable files for {deploy_language}: "
+                f"jars={len(result['jar_files'])}, python={len(result['py_files'])}, "
+                f"js={len(result['js_files'])}, go_bins={len(result['go_binaries'])}, "
+                f"shells={len(result['shell_scripts'])}")
     
     return result
 
@@ -1066,70 +1030,46 @@ def _generate_start_command_by_rules(
     Returns:
         生成的启动命令，如果无法通过规则生成则返回 None
     """
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Starting command generation")
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Input: file_path={file_path}, "
-               f"deploy_language={deploy_language}, extracted_dir_name={extracted_dir_name}")
-    logger.info(f"[DEBUG _generate_start_command_by_rules] File analysis: {json.dumps(file_analysis, ensure_ascii=False, default=str)}")
-    
     file_name = Path(file_path).name
     file_name_lower = file_name.lower()
-    logger.info(f"[DEBUG _generate_start_command_by_rules] File name: {file_name}")
     
     # 判断是否需要解压
     is_archive = file_analysis['file_type'] == 'archive'
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Is archive: {is_archive}")
     extract_cmd = ""
     work_dir = ""
     
     if is_archive:
         archive_type = file_analysis['archive_type']
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Archive type: {archive_type}")
         if archive_type == 'tar.gz':
             extract_cmd = f"[ -f {file_name} ] && tar -xzf {file_name} || exit 1"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated tar.gz extract command: {extract_cmd}")
         elif archive_type == 'tar':
             extract_cmd = f"[ -f {file_name} ] && tar -xf {file_name} || exit 1"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated tar extract command: {extract_cmd}")
         elif archive_type == 'zip':
             extract_cmd = f"[ -f {file_name} ] && unzip -o {file_name} || exit 1"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated zip extract command: {extract_cmd}")
         
         # 如果有明确的解压目录，使用它
         if extracted_dir_name:
             work_dir = f" && [ -d {extracted_dir_name} ] && cd {extracted_dir_name} || exit 1"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Using extracted directory: {extracted_dir_name}, work_dir: {work_dir}")
-        else:
-            # 如果没有明确目录，假设解压到当前目录
-            work_dir = ""
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No extracted directory, assuming current directory")
     
     # 根据语言类型生成命令
     files_in_archive = file_analysis.get('files_in_archive', [])
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Files in archive: {len(files_in_archive)} files")
     executable_files = _find_executable_files(files_in_archive, deploy_language)
     
     start_cmd = ""
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Processing deploy_language: {deploy_language}")
     
     if deploy_language == 'java':
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Processing Java application")
         # Java 应用：查找 jar 文件
         jar_files = executable_files['jar_files']
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Found {len(jar_files)} JAR files: {jar_files}")
         if jar_files:
             # 使用第一个找到的 jar 文件
             jar_file = jar_files[0].split('/')[-1]  # 只取文件名
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Selected JAR file (filename only): {jar_file}")
             if is_archive and extracted_dir_name:
                 jar_file = f"{extracted_dir_name}/{jar_file}"
-                logger.info(f"[DEBUG _generate_start_command_by_rules] JAR file with extracted dir: {jar_file}")
             elif is_archive:
                 jar_file = jar_file  # 假设解压到当前目录
-                logger.info(f"[DEBUG _generate_start_command_by_rules] JAR file in current dir: {jar_file}")
             start_cmd = f"[ -f {jar_file} ] && nohup java -jar {jar_file} > /root/app.log 2>&1 &"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Java start command: {start_cmd}")
+            logger.info(f"[_generate_start_command_by_rules] Generated Java start command for {jar_file}")
         else:
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No JAR files found, using first common name with defensive check")
             # 尝试第一个常见的 jar 文件名（带防御性检查，如果不存在会跳过）
             common_jar_names = ['app.jar', 'application.jar', 'main.jar', 'server.jar']
             jar_name = common_jar_names[0]  # 使用第一个作为默认
@@ -1137,43 +1077,33 @@ def _generate_start_command_by_rules(
                 test_path = f"{extracted_dir_name}/{jar_name}"
             else:
                 test_path = jar_name
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Using common JAR name: {test_path}")
             # 命令已包含防御性检查，如果文件不存在会失败
             start_cmd = f"[ -f {test_path} ] && nohup java -jar {test_path} > /root/app.log 2>&1 &"
     
     elif deploy_language == 'python':
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Processing Python application")
         # Python 应用：查找 py 文件或 requirements.txt
         py_files = executable_files['py_files']
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Found {len(py_files)} Python files: {py_files}")
         if py_files:
             # 优先查找 main.py, app.py, run.py, server.py
             preferred_names = ['main.py', 'app.py', 'run.py', 'server.py', 'application.py']
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Looking for preferred Python files: {preferred_names}")
             py_file = None
             for preferred in preferred_names:
                 for py_path in py_files:
                     if py_path.endswith(preferred):
                         py_file = py_path.split('/')[-1]
-                        logger.info(f"[DEBUG _generate_start_command_by_rules] Found preferred Python file: {py_file} (from {py_path})")
                         break
                 if py_file:
                     break
             
             if not py_file and py_files:
                 py_file = py_files[0].split('/')[-1]
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Using first Python file: {py_file}")
             
             if py_file:
                 if is_archive and extracted_dir_name:
                     py_file = f"{extracted_dir_name}/{py_file}"
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Python file with extracted dir: {py_file}")
-                else:
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Python file in current dir: {py_file}")
                 start_cmd = f"[ -f {py_file} ] && nohup python {py_file} > /root/app.log 2>&1 &"
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Python start command: {start_cmd}")
+                logger.info(f"[_generate_start_command_by_rules] Generated Python start command for {py_file}")
         else:
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No Python files found, using first common name with defensive check")
             # 尝试第一个常见的 Python 文件名（带防御性检查，如果不存在会跳过）
             common_py_names = ['app.py', 'main.py', 'run.py', 'server.py']
             py_name = common_py_names[0]  # 使用第一个作为默认
@@ -1181,96 +1111,69 @@ def _generate_start_command_by_rules(
                 test_path = f"{extracted_dir_name}/{py_name}"
             else:
                 test_path = py_name
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Using common Python name: {test_path}")
             # 命令已包含防御性检查，如果文件不存在会失败
             start_cmd = f"[ -f {test_path} ] && nohup python {test_path} > /root/app.log 2>&1 &"
     
     elif deploy_language == 'nodejs':
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Processing Node.js application")
         # Node.js 应用：查找 package.json
         if executable_files['package_json']:
             package_json_path = executable_files['package_json']
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Found package.json: {package_json_path}")
             if is_archive and extracted_dir_name:
                 package_json_dir = extracted_dir_name
             else:
                 package_json_dir = "."
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Package.json directory: {package_json_dir}")
             
             # 检查是否有 start.sh
             shell_scripts = executable_files['shell_scripts']
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Found {len(shell_scripts)} shell scripts: {shell_scripts}")
             start_script = None
             for script in shell_scripts:
                 if 'start' in script.lower():
                     start_script = script.split('/')[-1]
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Found start script: {start_script}")
                     break
             
             if start_script:
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Found start script: {start_script}")
                 # 即使有 start.sh，也先执行 npm install 确保依赖已安装
-                # 如果 start.sh 内部已经包含 npm install，这里执行也不会出错（npm install 是幂等的）
-                # 注意：如果 extracted_dir_name 存在，work_dir 会在命令组合阶段处理 cd，所以这里使用相对路径
-                # 如果 extracted_dir_name 不存在，文件解压到当前目录，也使用相对路径
                 script_path_for_cmd = start_script  # 使用相对路径（文件名），因为 work_dir 会处理 cd 或已在当前目录
                 start_cmd = f"command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm install && [ -f {script_path_for_cmd} ] && chmod +x {script_path_for_cmd} && nohup ./{script_path_for_cmd} > /root/app.log 2>&1 &"
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Node.js start command with script (with npm install): {start_cmd}")
+                logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command with script: {start_script}")
             else:
                 # 使用 npm start，必须先执行 npm install
-                logger.info(f"[DEBUG _generate_start_command_by_rules] No start script found, using npm start with npm install")
-                # 注意：如果 extracted_dir_name 存在，work_dir 会在命令组合阶段处理 cd
-                # 如果 extracted_dir_name 不存在，文件解压到当前目录
-                # 两种情况都使用相对路径 package.json
                 start_cmd = f"command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm install && nohup npm start > /root/app.log 2>&1 &"
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Node.js start command with npm (with npm install): {start_cmd}")
+                logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command with npm start")
         else:
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No package.json found, trying to find JS files")
             # 尝试查找 js 文件
             js_files = executable_files['js_files']
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Found {len(js_files)} JS files: {js_files}")
             if js_files:
                 # 优先查找 index.js, app.js, server.js
                 preferred_names = ['index.js', 'app.js', 'server.js', 'main.js']
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Looking for preferred JS files: {preferred_names}")
                 js_file = None
                 for preferred in preferred_names:
                     for js_path in js_files:
                         if js_path.endswith(preferred):
                             js_file = js_path.split('/')[-1]
-                            logger.info(f"[DEBUG _generate_start_command_by_rules] Found preferred JS file: {js_file} (from {js_path})")
                             break
                     if js_file:
                         break
                 
                 if not js_file and js_files:
                     js_file = js_files[0].split('/')[-1]
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Using first JS file: {js_file}")
                 
                 if js_file:
                     if is_archive and extracted_dir_name:
                         js_file = f"{extracted_dir_name}/{js_file}"
-                        logger.info(f"[DEBUG _generate_start_command_by_rules] JS file with extracted dir: {js_file}")
-                    else:
-                        logger.info(f"[DEBUG _generate_start_command_by_rules] JS file in current dir: {js_file}")
                     start_cmd = f"[ -f {js_file} ] && nohup node {js_file} > /root/app.log 2>&1 &"
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Node.js start command: {start_cmd}")
+                    logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command for {js_file}")
                 else:
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Failed to determine JS file")
                     return None
             else:
-                logger.info(f"[DEBUG _generate_start_command_by_rules] No JS files found, cannot generate command")
                 return None
     
     elif deploy_language == 'golang':
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Processing Golang application")
         # Go 应用：查找二进制文件
         go_binaries = executable_files['go_binaries']
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Found {len(go_binaries)} potential Go binaries: {go_binaries}")
         # Go 二进制文件通常没有扩展名，且名称可能包含路径
         # 尝试查找常见的二进制文件名
         common_bin_names = ['app', 'main', 'server', 'application']
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Looking for common binary names: {common_bin_names}")
         binary_file = None
         
         for bin_name in common_bin_names:
@@ -1278,7 +1181,6 @@ def _generate_start_command_by_rules(
                 file_name_only = file_path.split('/')[-1]
                 if file_name_only == bin_name or file_name_only.startswith(bin_name):
                     binary_file = file_path.split('/')[-1]
-                    logger.info(f"[DEBUG _generate_start_command_by_rules] Found binary file: {binary_file} (from {file_path})")
                     break
             if binary_file:
                 break
@@ -1286,43 +1188,30 @@ def _generate_start_command_by_rules(
         if binary_file:
             if is_archive and extracted_dir_name:
                 binary_file = f"{extracted_dir_name}/{binary_file}"
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Binary file with extracted dir: {binary_file}")
-            else:
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Binary file in current dir: {binary_file}")
             start_cmd = f"[ -f {binary_file} ] && chmod +x {binary_file} && nohup ./{binary_file} > /root/app.log 2>&1 &"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Golang start command: {start_cmd}")
+            logger.info(f"[_generate_start_command_by_rules] Generated Golang start command for {binary_file}")
         else:
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No binary found, trying base filename")
             # 尝试直接使用文件名（去掉扩展名）
             base_name = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Base filename: {base_name}")
             if is_archive and extracted_dir_name:
                 test_path = f"{extracted_dir_name}/{base_name}"
             else:
                 test_path = base_name
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Testing path: {test_path}")
             start_cmd = f"[ -f {test_path} ] && chmod +x {test_path} && nohup ./{test_path} > /root/app.log 2>&1 & || true"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Golang start command with fallback: {start_cmd}")
             if not start_cmd:
-                logger.info(f"[DEBUG _generate_start_command_by_rules] Failed to generate Golang start command")
                 return None
     
     elif deploy_language == 'docker':
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Processing Docker application")
         # Docker 应用：检查是否有 Dockerfile，然后生成 docker build 和 docker run 命令
         dockerfile_path = executable_files.get('dockerfile')
         
         if not dockerfile_path:
-            logger.info(f"[DEBUG _generate_start_command_by_rules] No Dockerfile found, returning None")
             return None
-        
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Found Dockerfile: {dockerfile_path}")
         
         # 生成 Docker 命令
         # 使用应用名称作为镜像和容器名称的基础（如果没有，使用默认值）
         image_name = (application_name or 'app').lower().replace(' ', '-').replace('_', '-')
         container_name = image_name
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Using image name: {image_name}, container name: {container_name}")
         
         # 确定 Dockerfile 的路径
         if is_archive and extracted_dir_name:
@@ -1338,14 +1227,8 @@ def _generate_start_command_by_rules(
             dockerfile_dir = "."
             dockerfile_for_build = "Dockerfile"
         
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Dockerfile directory: {dockerfile_dir}, Dockerfile path for build: {dockerfile_for_build}")
-        
         # 构建 Docker 命令
-        # 1. 先停止并删除可能存在的旧容器
-        # 2. 构建镜像
-        # 3. 运行容器
         port_mapping = f"-p {port}:{port} " if port else ""
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Port mapping: {port_mapping if port_mapping else 'None'}")
         
         # 检查 Docker 是否安装
         docker_check = "command -v docker >/dev/null 2>&1 && "
@@ -1360,30 +1243,22 @@ def _generate_start_command_by_rules(
         run_cmd = f"docker run -d --name {container_name} {port_mapping}{image_name}:latest"
         
         # 组合命令
-        # 注意：对于 Docker，如果 is_archive 为 true，work_dir 会在命令组合阶段处理 cd
-        # 所以这里只需要生成 Docker 相关的命令，不需要额外的 cd_cmd
         start_cmd = f"{docker_check}{stop_old_container}{build_cmd}{run_cmd}"
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Generated Docker start command (before work_dir): {start_cmd}")
+        logger.info(f"[_generate_start_command_by_rules] Generated Docker start command for {container_name}")
     
     else:
         # 未知语言类型，返回 None
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Unknown deploy_language: {deploy_language}, returning None")
         return None
     
     # 组合命令
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Combining commands: is_archive={is_archive}, work_dir={work_dir}, start_cmd={start_cmd}")
     if is_archive:
         if work_dir:
             final_cmd = f"{extract_cmd}{work_dir} && {start_cmd}"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Final command with extract and work_dir: {final_cmd}")
         else:
             final_cmd = f"{extract_cmd} && {start_cmd}"
-            logger.info(f"[DEBUG _generate_start_command_by_rules] Final command with extract (no work_dir): {final_cmd}")
     else:
         final_cmd = start_cmd
-        logger.info(f"[DEBUG _generate_start_command_by_rules] Final command (no archive): {final_cmd}")
     
-    logger.info(f"[DEBUG _generate_start_command_by_rules] Returning final command: {final_cmd}")
     return final_cmd
 
 
@@ -1399,8 +1274,6 @@ def _generate_stop_command_by_rules(
     Returns:
         生成的停止命令（总是返回有效命令，未知语言使用通用命令）
     """
-    logger.info(f"[DEBUG _generate_stop_command_by_rules] Generating stop command for language: {deploy_language}")
-    
     # 语言到停止命令的映射
     stop_commands = {
         'java': "pkill -f 'java -jar' || true",
@@ -1417,7 +1290,6 @@ def _generate_stop_command_by_rules(
         # 使用映射表，未知语言使用通用命令
         stop_cmd = stop_commands.get(deploy_language, "pkill -f 'app' || true")
     
-    logger.info(f"[DEBUG _generate_stop_command_by_rules] Generated stop command: {stop_cmd}")
     return stop_cmd
 
 
@@ -1439,9 +1311,6 @@ def _generate_start_stop_commands_by_rules(
     Returns:
         (start_command, stop_command): 如果无法通过规则生成则返回 (None, None)
     """
-    logger.info(f"[DEBUG _generate_start_stop_commands_by_rules] Starting: file_path={file_path}, "
-                f"deploy_language={deploy_language}, application_name={application_name}, port={port}")
-    
     try:
         # 分析部署文件
         file_analysis = _analyze_deployment_file(file_path)
@@ -1459,11 +1328,11 @@ def _generate_start_stop_commands_by_rules(
         
         # 记录结果
         if start_cmd:
-            logger.info(f"[_generate_start_stop_commands_by_rules] Generated start command: {start_cmd}")
+            logger.info(f"[_generate_start_stop_commands_by_rules] Successfully generated start command for {deploy_language}")
         else:
-            logger.warning(f"[_generate_start_stop_commands_by_rules] Failed to generate start command")
+            logger.warning(f"[_generate_start_stop_commands_by_rules] Failed to generate start command for {deploy_language}")
         
-        logger.info(f"[_generate_start_stop_commands_by_rules] Generated stop command: {stop_cmd}")
+        logger.info(f"[_generate_start_stop_commands_by_rules] Generated stop command for {deploy_language}")
         
         return (start_cmd, stop_cmd)
     
