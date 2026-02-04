@@ -1,11 +1,15 @@
 import re
 import logging
+import tarfile
+import zipfile
+import tempfile
+import shutil
 
 from alibaba_cloud_ops_mcp_server.tools.api_tools import _tools_api_call
 from pathlib import Path
 import alibabacloud_oss_v2 as oss
 from pydantic import Field
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Set
 import json
 import time
 from alibabacloud_oos20190601.client import Client as oos20190601Client
@@ -48,33 +52,13 @@ def OOS_CodeDeploy(
         deploy_region_id: str = Field(description='Region ID for deployment'),
         application_group_name: str = Field(description='name of the application group'),
         object_name: str = Field(description='OSS object name'),
-        file_path: str = Field(description='Local file path to upload. If the file is not in '
-                                           '.code_deploy/release directory, it will be copied there.'),
-        application_start: str = Field(
-            description='Application start command script. IMPORTANT: If the uploaded artifact '
-                        'is a tar archive or compressed package (e.g., .tar, .tar.gz, .zip), '
-                        'you MUST first extract it and navigate into the corresponding directory'
-                        ' before executing the start command. The start command must correspond '
-                        'to the actual structure of the extracted artifact. For example, if you '
-                        'upload a tar.gz file containing a Java application, first extract it '
-                        'with "tar -xzf <filename>.tar.gz", then cd into the extracted '
-                        'directory, and then run the start command (e.g., "java -jar app.jar" '
-                        'or "./start.sh"). Ensure the start command matches the actual '
-                        'executable or script in the extracted artifact to avoid deployment '
-                        'failures. Do not blindly use the `cd` command; always verify that the corresponding file '
-                        'and path exist before using it.'),
-        application_stop: str = Field(description='Application stop command script, Defensive stop command - checks if '
-                                                  'the service exists and if the CD path exists, preventing errors '
-                                                  'caused by blindly using `cd` or due to non-existent commands.'),
+        file_path: str = Field(description='Local file path to upload. If the file is not in .code_deploy/release directory, it will be copied there.'),
         deploy_language: str = Field(description='Deploy language, like:docker, java, python, nodejs, golang'),
         port: int = Field(description='Application listening port'),
-        project_path: Optional[str] = Field(description='Root path of the project. The .code_deploy '
-                                                                       'directory will be created in this path. '
-                                                                       'If not provided, will try to infer from file_path '
-                                                                       'or use current working directory.'),
-        instance_ids: list = Field(description='AlibabaCloud ECS instance ID List. If empty or not provided, user '
-                                               'will be prompted to create ECS instances.', default=None)
-
+        project_path: Optional[str] = Field(description='Root path of the project. The .code_deploy directory will be created in this path. If not provided, will try to infer from file_path or use current working directory.'),
+        application_start: Optional[str] = Field(default=None, description='**OPTIONAL - DO NOT PROVIDE UNLESS USER EXPLICITLY REQUIRES IT** Application start command script. In normal cases, you should NOT provide this parameter. The system will automatically generate the start command using rule engine based on deployment file analysis and deploy_language. Only provide this parameter when: (1) User explicitly specifies a custom start command, or (2) User provides specific instructions about the start command. The auto-generated command includes defensive checks for file/path existence and proper archive extraction. If you must provide a custom command, ensure it includes defensive checks like "[ -f file ] && command" and handles archive extraction properly.'),
+        application_stop: Optional[str] = Field( default=None, description='**OPTIONAL - DO NOT PROVIDE UNLESS USER EXPLICITLY REQUIRES IT** Application stop command script. In normal cases, you should NOT provide this parameter. The system will automatically generate the stop command using rule engine based on deploy_language. Only provide this parameter when: (1) User explicitly specifies a custom stop command, or (2) User provides specific instructions about the stop command. The auto-generated command includes defensive checks and proper process termination.'),
+        instance_ids: list = Field(description='AlibabaCloud ECS instance ID List. If empty or not provided, user will be prompted to create ECS instances.', default=None)
 ):
     """
     将应用部署到阿里云ECS实例。使用阿里云OOS（运维编排服务）的CodeDeploy功能实现自动化部署。
@@ -85,30 +69,40 @@ def OOS_CodeDeploy(
     2. **构建部署产物**：执行构建命令生成压缩包（tar.gz、zip等），保存到 `.code_deploy/release` 目录
     3. **准备ECS实例**：确保目标ECS实例已创建，获取实例ID列表
 
-    ## 核心要求
+    ## ⚠️ 重要提示：启动和停止命令参数
 
-    ### 1. 防御性命令设计（必须）
-    启动和停止命令必须包含存在性检查，避免因路径/文件/命令不存在导致失败：
+    **正常情况下，不需要提供 application_start 和 application_stop 参数！**
+    
+    - 系统会自动通过规则引擎分析部署文件和 deploy_language，自动生成启动和停止命令
+    - 自动生成的命令包含所有必要的防御性检查（文件存在性、路径存在性等）
+    - 自动生成的命令正确处理压缩包解压、目录切换、后台运行、日志重定向等
+    - 对于 Node.js 应用，自动生成的命令会先执行 `npm install` 安装依赖
+    
+    **只有在以下情况下才需要手动提供这两个参数：**
+    1. 用户明确指定了自定义的启动/停止命令
+    2. 用户提供了关于启动/停止命令的特殊要求或说明
+    
+    **调用建议：直接调用工具，不传 application_start 和 application_stop 参数即可。**
+
+    ## 自动生成的命令规范（供参考，了解即可）
+
+    ### 1. 防御性命令设计
+    自动生成的命令包含存在性检查，避免因路径/文件/命令不存在导致失败：
     - 压缩包：先检查文件存在再解压 `[ -f app.tar.gz ] && tar -xzf app.tar.gz || exit 1`
     - 可执行文件：检查文件存在再执行 `[ -f start.sh ] && chmod +x start.sh && ./start.sh || exit 1`
     - 命令可用性：检查命令是否存在 `command -v npm >/dev/null 2>&1 || exit 1`
-    - 禁止直接使用 `cd`，必须先验证路径存在
+    - 目录切换：先验证路径存在再切换 `[ -d dir ] && cd dir || exit 1`
 
-    ### 2. 压缩包处理规范（必须）
-    如果产物是压缩包，启动命令必须先解压：
+    ### 2. 压缩包处理规范
+    如果产物是压缩包，自动生成的命令会先解压：
     - 使用非交互式命令：`tar -xzf`、`unzip -o`（自动覆盖，无需确认）
     - 解压后执行启动命令，确保路径对应
-    - 示例：`tar -xzf app.tar.gz && nohup java -jar app.jar > /root/app.log 2>&1 &`
+    - 示例：`tar -xzf app.tar.gz && [ -d app ] && cd app && nohup java -jar app.jar > /root/app.log 2>&1 &`
 
-    ### 3. 后台运行与日志（必须）
-    启动命令必须使用后台运行并重定向日志：
+    ### 3. 后台运行与日志
+    自动生成的启动命令使用后台运行并重定向日志：
     - 格式：`nohup <command> > /root/app.log 2>&1 &`
     - 说明：nohup保持后台运行，`>` 重定向标准输出，`2>&1` 合并错误输出，`&` 后台执行
-
-    ### 4. 停止命令规范
-    停止命令需检查服务/进程是否存在：
-    - systemctl服务：`systemctl list-units | grep -q "service" && systemctl stop service`
-    - 进程名：`pkill -f "process_pattern" || true`
 
     ## 注意事项
 
@@ -238,13 +232,60 @@ def OOS_CodeDeploy(
         file_path = str(release_path_resolved)
     else:
         logger.info(f"[code_deploy] File already in release directory: {file_path}")
+    
+    # 如果未提供启动/停止命令，尝试通过规则引擎生成
+    if not application_start or not application_stop:
+        logger.info(f"[code_deploy] Attempting to auto-generate commands using rule engine. "
+                   f"Provided: start={application_start is not None}, stop={application_stop is not None}")
+        
+        generated_start, generated_stop = _generate_start_stop_commands_by_rules(
+            file_path, deploy_language, name, port
+        )
+        
+        if not application_start and generated_start:
+            application_start = generated_start
+            logger.info(f"[code_deploy] Auto-generated start command successfully")
+        elif not application_start:
+            logger.warning(f"[code_deploy] Failed to generate start command automatically, manual input required")
+            return {
+                'error': 'START_COMMAND_REQUIRED',
+                'message': '无法通过规则引擎自动生成启动命令，请手动提供 application_start 参数并再次调用OOS_CodeDeploy',
+                'file_path': file_path,
+                'deploy_language': deploy_language,
+                'instructions': f'''
+                    ## 启动命令生成失败
+                    
+                    系统尝试通过规则引擎自动生成启动命令，但未能成功识别。
+                    
+                    **文件路径**: {file_path}
+                    **部署语言**: {deploy_language}
+                    
+                    请根据以下信息手动提供启动命令：
+                    1. 如果文件是压缩包（tar.gz、zip等），需要先解压
+                    2. 启动命令必须包含防御性检查（检查文件/路径是否存在）
+                    3. 启动命令必须使用后台运行并重定向日志：`nohup <command> > /root/app.log 2>&1 &`
+                    
+                    示例：
+                    - Java: `[ -f app.tar.gz ] && tar -xzf app.tar.gz && [ -f app/app.jar ] && nohup java -jar app/app.jar > /root/app.log 2>&1 &`
+                    - Python: `[ -f app.tar.gz ] && tar -xzf app.tar.gz && [ -f app/app.py ] && nohup python app/app.py > /root/app.log 2>&1 &`
+                    - Node.js: `[ -f app.tar.gz ] && tar -xzf app.tar.gz && [ -f app/package.json ] && nohup npm start > /root/app.log 2>&1 &`
+                '''
+            }
+        
+        if not application_stop and generated_stop:
+            application_stop = generated_stop
+            logger.info(f"[code_deploy] Auto-generated stop command successfully")
+    
+    logger.info(f"[code_deploy] Deployment commands ready - start: {bool(application_start)}, stop: {bool(application_stop)}")
+    
     region_id_oss = 'cn-hangzhou'
     is_internal_oss = True if deploy_region_id.lower() == 'cn-hangzhou' else False
     # Log input parameters
     logger.info(f"[code_deploy] Input parameters: name={name}, deploy_region_id={deploy_region_id}, "
                 f"application_group_name={application_group_name}, instance_ids={instance_ids}, "
                 f"region_id_oss={region_id_oss}, object_name={object_name}, "
-                f"is_internal_oss={is_internal_oss}, port={port}")
+                f"is_internal_oss={is_internal_oss}, port={port}, "
+                f"application_start={application_start}, application_stop={application_stop}")
 
     # Upload file to OSS
     try:
@@ -808,3 +849,493 @@ def _create_revision_deploy_parameters():
             "Mode": "FailurePause"
         }
     }
+
+
+def _extract_top_level_dir(members: List[str]) -> Optional[str]:
+    """
+    从压缩包成员列表中提取顶级目录名
+    
+    如果所有文件都在同一个顶级目录下，返回该目录名；否则返回 None
+    """
+    if not members:
+        return None
+    
+    top_level = set()
+    for member in members:
+        parts = member.split('/')
+        if parts[0]:
+            top_level.add(parts[0])
+    
+    if len(top_level) == 1:
+        return list(top_level)[0]
+    return None
+
+
+def _analyze_deployment_file(file_path: str) -> Dict:
+    """
+    分析部署文件，返回文件类型和内容列表
+    
+    Returns:
+        {
+            'file_type': 'archive' | 'directory' | 'file',
+            'archive_type': 'tar.gz' | 'tar' | 'zip' | None,
+            'file_name': str,
+            'files_in_archive': List[str],  # 压缩包内的文件列表
+            'extracted_dir_name': Optional[str],  # 解压后的目录名（如果有）
+        }
+    """
+    file_path_obj = Path(file_path)
+    
+    if not file_path_obj.exists():
+        logger.warning(f"[_analyze_deployment_file] File does not exist: {file_path}")
+        return {'file_type': 'unknown', 'file_name': file_path_obj.name}
+    
+    result = {
+        'file_type': 'file',
+        'archive_type': None,
+        'file_name': file_path_obj.name,
+        'files_in_archive': [],
+        'extracted_dir_name': None,
+    }
+    
+    file_name_lower = file_path_obj.name.lower()
+    
+    # 处理 tar.gz 和 tar 文件
+    if file_name_lower.endswith('.tar.gz') or file_name_lower.endswith('.tgz'):
+        result['file_type'] = 'archive'
+        result['archive_type'] = 'tar.gz'
+        try:
+            with tarfile.open(file_path, 'r:gz') as tar:
+                members = tar.getnames()
+                result['files_in_archive'] = members
+                result['extracted_dir_name'] = _extract_top_level_dir(members)
+                logger.info(f"[_analyze_deployment_file] Analyzed tar.gz archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
+        except Exception as e:
+            logger.warning(f"[_analyze_deployment_file] Failed to read tar.gz: {e}")
+    
+    elif file_name_lower.endswith('.tar'):
+        result['file_type'] = 'archive'
+        result['archive_type'] = 'tar'
+        try:
+            with tarfile.open(file_path, 'r') as tar:
+                members = tar.getnames()
+                result['files_in_archive'] = members
+                result['extracted_dir_name'] = _extract_top_level_dir(members)
+                logger.info(f"[_analyze_deployment_file] Analyzed tar archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
+        except Exception as e:
+            logger.warning(f"[_analyze_deployment_file] Failed to read tar: {e}")
+    
+    elif file_name_lower.endswith('.zip'):
+        result['file_type'] = 'archive'
+        result['archive_type'] = 'zip'
+        try:
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                members = zip_ref.namelist()
+                result['files_in_archive'] = members
+                result['extracted_dir_name'] = _extract_top_level_dir(members)
+                logger.info(f"[_analyze_deployment_file] Analyzed zip archive: {len(members)} files, "
+                           f"extracted_dir: {result['extracted_dir_name']}")
+        except Exception as e:
+            logger.warning(f"[_analyze_deployment_file] Failed to read zip: {e}")
+    
+    return result
+
+
+def _find_executable_files(files_list: List[str], deploy_language: str) -> Dict[str, List[str]]:
+    """
+    在文件列表中查找可执行文件
+    
+    Returns:
+        {
+            'jar_files': List[str],
+            'py_files': List[str],
+            'js_files': List[str],
+            'go_binaries': List[str],
+            'shell_scripts': List[str],
+            'package_json': Optional[str],
+            'requirements_txt': Optional[str],
+            'dockerfile': Optional[str],
+        }
+    """
+    result = {
+        'jar_files': [],
+        'py_files': [],
+        'js_files': [],
+        'go_binaries': [],
+        'shell_scripts': [],
+        'package_json': None,
+        'requirements_txt': None,
+        'dockerfile': None,
+    }
+    
+    for file_path in files_list:
+        file_name = file_path.split('/')[-1].lower()
+        
+        # Java
+        if file_name.endswith('.jar'):
+            result['jar_files'].append(file_path)
+        # Python
+        elif file_name.endswith('.py'):
+            result['py_files'].append(file_path)
+        # Node.js
+        elif file_name == 'package.json':
+            result['package_json'] = file_path
+        elif file_name.endswith('.js'):
+            result['js_files'].append(file_path)
+        # Go - 只在 golang 语言时查找潜在的二进制文件
+        # 排除常见的非二进制文件（文档、配置等）
+        elif deploy_language == 'golang':
+            # 排除列表：常见的非二进制文件名
+            non_binary_names = {
+                'readme', 'license', 'makefile', 'dockerfile', 'changelog',
+                'contributing', 'authors', 'version', 'manifest', 'config',
+                'gitignore', 'dockerignore', 'editorconfig', 'env'
+            }
+            file_name_no_ext = file_name.split('.')[0] if '.' in file_name else file_name
+            # 检查是否是潜在的 Go 二进制：没有扩展名（或只有一个点），且不在排除列表中
+            has_extension = '.' in file_name and not file_name.startswith('.')
+            if not has_extension and file_name_no_ext.lower() not in non_binary_names:
+                result['go_binaries'].append(file_path)
+        # Shell scripts
+        elif file_name.endswith('.sh'):
+            result['shell_scripts'].append(file_path)
+        # Python requirements
+        elif file_name == 'requirements.txt':
+            result['requirements_txt'] = file_path
+        # Dockerfile
+        elif file_name == 'dockerfile' and not file_path.lower().endswith('.dockerignore'):
+            result['dockerfile'] = file_path
+    
+    logger.info(f"[_find_executable_files] Found executable files for {deploy_language}: "
+                f"jars={len(result['jar_files'])}, python={len(result['py_files'])}, "
+                f"js={len(result['js_files'])}, go_bins={len(result['go_binaries'])}, "
+                f"shells={len(result['shell_scripts'])}")
+    
+    return result
+
+
+def _generate_start_command_by_rules(
+    file_path: str,
+    deploy_language: str,
+    file_analysis: Dict,
+    extracted_dir_name: Optional[str] = None,
+    application_name: Optional[str] = None,
+    port: Optional[int] = None
+) -> Optional[str]:
+    """
+    根据规则生成启动命令
+    
+    Returns:
+        生成的启动命令，如果无法通过规则生成则返回 None
+    """
+    file_name = Path(file_path).name
+    file_name_lower = file_name.lower()
+    
+    # 判断是否需要解压
+    is_archive = file_analysis['file_type'] == 'archive'
+    extract_cmd = ""
+    work_dir = ""
+    
+    if is_archive:
+        archive_type = file_analysis['archive_type']
+        if archive_type == 'tar.gz':
+            extract_cmd = f"[ -f {file_name} ] && tar -xzf {file_name} || exit 1"
+        elif archive_type == 'tar':
+            extract_cmd = f"[ -f {file_name} ] && tar -xf {file_name} || exit 1"
+        elif archive_type == 'zip':
+            extract_cmd = f"[ -f {file_name} ] && unzip -o {file_name} || exit 1"
+        
+        # 如果有明确的解压目录，使用它
+        if extracted_dir_name:
+            work_dir = f" && [ -d {extracted_dir_name} ] && cd {extracted_dir_name} || exit 1"
+    
+    # 根据语言类型生成命令
+    files_in_archive = file_analysis.get('files_in_archive', [])
+    executable_files = _find_executable_files(files_in_archive, deploy_language)
+    
+    start_cmd = ""
+    
+    if deploy_language == 'java':
+        # Java 应用：查找 jar 文件
+        jar_files = executable_files['jar_files']
+        if jar_files:
+            # 使用第一个找到的 jar 文件
+            jar_file = jar_files[0].split('/')[-1]  # 只取文件名
+            if is_archive and extracted_dir_name:
+                jar_file = f"{extracted_dir_name}/{jar_file}"
+            elif is_archive:
+                jar_file = jar_file  # 假设解压到当前目录
+            start_cmd = f"[ -f {jar_file} ] && nohup java -jar {jar_file} > /root/app.log 2>&1 &"
+            logger.info(f"[_generate_start_command_by_rules] Generated Java start command for {jar_file}")
+        else:
+            # 尝试第一个常见的 jar 文件名（带防御性检查，如果不存在会跳过）
+            common_jar_names = ['app.jar', 'application.jar', 'main.jar', 'server.jar']
+            jar_name = common_jar_names[0]  # 使用第一个作为默认
+            if is_archive and extracted_dir_name:
+                test_path = f"{extracted_dir_name}/{jar_name}"
+            else:
+                test_path = jar_name
+            # 命令已包含防御性检查，如果文件不存在会失败
+            start_cmd = f"[ -f {test_path} ] && nohup java -jar {test_path} > /root/app.log 2>&1 &"
+    
+    elif deploy_language == 'python':
+        # Python 应用：查找 py 文件或 requirements.txt
+        py_files = executable_files['py_files']
+        if py_files:
+            # 优先查找 main.py, app.py, run.py, server.py
+            preferred_names = ['main.py', 'app.py', 'run.py', 'server.py', 'application.py']
+            py_file = None
+            for preferred in preferred_names:
+                for py_path in py_files:
+                    if py_path.endswith(preferred):
+                        py_file = py_path.split('/')[-1]
+                        break
+                if py_file:
+                    break
+            
+            if not py_file and py_files:
+                py_file = py_files[0].split('/')[-1]
+            
+            if py_file:
+                if is_archive and extracted_dir_name:
+                    py_file = f"{extracted_dir_name}/{py_file}"
+                start_cmd = f"[ -f {py_file} ] && nohup python {py_file} > /root/app.log 2>&1 &"
+                logger.info(f"[_generate_start_command_by_rules] Generated Python start command for {py_file}")
+        else:
+            # 尝试第一个常见的 Python 文件名（带防御性检查，如果不存在会跳过）
+            common_py_names = ['app.py', 'main.py', 'run.py', 'server.py']
+            py_name = common_py_names[0]  # 使用第一个作为默认
+            if is_archive and extracted_dir_name:
+                test_path = f"{extracted_dir_name}/{py_name}"
+            else:
+                test_path = py_name
+            # 命令已包含防御性检查，如果文件不存在会失败
+            start_cmd = f"[ -f {test_path} ] && nohup python {test_path} > /root/app.log 2>&1 &"
+    
+    elif deploy_language == 'nodejs':
+        # Node.js 应用：查找 package.json
+        if executable_files['package_json']:
+            package_json_path = executable_files['package_json']
+            if is_archive and extracted_dir_name:
+                package_json_dir = extracted_dir_name
+            else:
+                package_json_dir = "."
+            
+            # 检查是否有 start.sh
+            shell_scripts = executable_files['shell_scripts']
+            start_script = None
+            for script in shell_scripts:
+                if 'start' in script.lower():
+                    start_script = script.split('/')[-1]
+                    break
+            
+            if start_script:
+                # 即使有 start.sh，也先执行 npm install 确保依赖已安装
+                script_path_for_cmd = start_script  # 使用相对路径（文件名），因为 work_dir 会处理 cd 或已在当前目录
+                start_cmd = f"command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm install && [ -f {script_path_for_cmd} ] && chmod +x {script_path_for_cmd} && nohup ./{script_path_for_cmd} > /root/app.log 2>&1 &"
+                logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command with script: {start_script}")
+            else:
+                # 使用 npm start，必须先执行 npm install
+                start_cmd = f"command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm install && nohup npm start > /root/app.log 2>&1 &"
+                logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command with npm start")
+        else:
+            # 尝试查找 js 文件
+            js_files = executable_files['js_files']
+            if js_files:
+                # 优先查找 index.js, app.js, server.js
+                preferred_names = ['index.js', 'app.js', 'server.js', 'main.js']
+                js_file = None
+                for preferred in preferred_names:
+                    for js_path in js_files:
+                        if js_path.endswith(preferred):
+                            js_file = js_path.split('/')[-1]
+                            break
+                    if js_file:
+                        break
+                
+                if not js_file and js_files:
+                    js_file = js_files[0].split('/')[-1]
+                
+                if js_file:
+                    if is_archive and extracted_dir_name:
+                        js_file = f"{extracted_dir_name}/{js_file}"
+                    start_cmd = f"[ -f {js_file} ] && nohup node {js_file} > /root/app.log 2>&1 &"
+                    logger.info(f"[_generate_start_command_by_rules] Generated Node.js start command for {js_file}")
+                else:
+                    return None
+            else:
+                return None
+    
+    elif deploy_language == 'golang':
+        # Go 应用：查找二进制文件
+        go_binaries = executable_files['go_binaries']
+        # Go 二进制文件通常没有扩展名，且名称可能包含路径
+        # 尝试查找常见的二进制文件名
+        common_bin_names = ['app', 'main', 'server', 'application']
+        binary_file = None
+        
+        for bin_name in common_bin_names:
+            for file_path in files_in_archive:
+                file_name_only = file_path.split('/')[-1]
+                if file_name_only == bin_name or file_name_only.startswith(bin_name):
+                    binary_file = file_path.split('/')[-1]
+                    break
+            if binary_file:
+                break
+        
+        if binary_file:
+            if is_archive and extracted_dir_name:
+                binary_file = f"{extracted_dir_name}/{binary_file}"
+            start_cmd = f"[ -f {binary_file} ] && chmod +x {binary_file} && nohup ./{binary_file} > /root/app.log 2>&1 &"
+            logger.info(f"[_generate_start_command_by_rules] Generated Golang start command for {binary_file}")
+        else:
+            # 尝试直接使用文件名（去掉扩展名）
+            base_name = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name
+            if is_archive and extracted_dir_name:
+                test_path = f"{extracted_dir_name}/{base_name}"
+            else:
+                test_path = base_name
+            start_cmd = f"[ -f {test_path} ] && chmod +x {test_path} && nohup ./{test_path} > /root/app.log 2>&1 & || true"
+            if not start_cmd:
+                return None
+    
+    elif deploy_language == 'docker':
+        # Docker 应用：检查是否有 Dockerfile，然后生成 docker build 和 docker run 命令
+        dockerfile_path = executable_files.get('dockerfile')
+        
+        if not dockerfile_path:
+            return None
+        
+        # 生成 Docker 命令
+        # 使用应用名称作为镜像和容器名称的基础（如果没有，使用默认值）
+        image_name = (application_name or 'app').lower().replace(' ', '-').replace('_', '-')
+        container_name = image_name
+        
+        # 确定 Dockerfile 的路径
+        if is_archive and extracted_dir_name:
+            # 如果 Dockerfile 在解压目录中
+            dockerfile_dir = extracted_dir_name
+            dockerfile_for_build = "Dockerfile"  # 在解压目录中，使用相对路径
+        elif is_archive:
+            # 解压到当前目录
+            dockerfile_dir = "."
+            dockerfile_for_build = "Dockerfile"
+        else:
+            # 不是压缩包，使用文件所在目录
+            dockerfile_dir = "."
+            dockerfile_for_build = "Dockerfile"
+        
+        # 构建 Docker 命令
+        port_mapping = f"-p {port}:{port} " if port else ""
+        
+        # 检查 Docker 是否安装
+        docker_check = "command -v docker >/dev/null 2>&1 && "
+        
+        # 停止并删除旧容器（如果存在）
+        stop_old_container = f"docker stop {container_name} 2>/dev/null || true && docker rm {container_name} 2>/dev/null || true && "
+        
+        # 构建镜像（检查 Dockerfile 是否存在）
+        build_cmd = f"[ -f {dockerfile_for_build} ] && docker build -t {image_name}:latest . && "
+        
+        # 运行容器
+        run_cmd = f"docker run -d --name {container_name} {port_mapping}{image_name}:latest"
+        
+        # 组合命令
+        start_cmd = f"{docker_check}{stop_old_container}{build_cmd}{run_cmd}"
+        logger.info(f"[_generate_start_command_by_rules] Generated Docker start command for {container_name}")
+    
+    else:
+        # 未知语言类型，返回 None
+        return None
+    
+    # 组合命令
+    if is_archive:
+        if work_dir:
+            final_cmd = f"{extract_cmd}{work_dir} && {start_cmd}"
+        else:
+            final_cmd = f"{extract_cmd} && {start_cmd}"
+    else:
+        final_cmd = start_cmd
+    
+    return final_cmd
+
+
+def _generate_stop_command_by_rules(
+    deploy_language: str,
+    file_analysis: Dict,
+    extracted_dir_name: Optional[str] = None,
+    application_name: Optional[str] = None
+) -> str:
+    """
+    根据规则生成停止命令
+    
+    Returns:
+        生成的停止命令（总是返回有效命令，未知语言使用通用命令）
+    """
+    # 语言到停止命令的映射
+    stop_commands = {
+        'java': "pkill -f 'java -jar' || true",
+        'python': "pkill -f 'python.*\\.py' || true",
+        'nodejs': "pkill -f 'node.*\\.js' || pkill -f 'npm start' || true",
+        'golang': "pkill -f './app' || pkill -f './main' || pkill -f './server' || true",
+    }
+    
+    # Docker 需要特殊处理（使用容器名）
+    if deploy_language == 'docker':
+        container_name = (application_name or 'app').lower().replace(' ', '-').replace('_', '-')
+        stop_cmd = f"docker stop {container_name} 2>/dev/null || true && docker rm {container_name} 2>/dev/null || true"
+    else:
+        # 使用映射表，未知语言使用通用命令
+        stop_cmd = stop_commands.get(deploy_language, "pkill -f 'app' || true")
+    
+    return stop_cmd
+
+
+def _generate_start_stop_commands_by_rules(
+    file_path: str,
+    deploy_language: str,
+    application_name: Optional[str] = None,
+    port: Optional[int] = None
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    根据工程规则生成启动和停止命令
+    
+    Args:
+        file_path: 部署文件路径
+        deploy_language: 部署语言类型
+        application_name: 应用名称（用于 Docker 容器命名等）
+        port: 应用端口（用于 Docker 端口映射等）
+    
+    Returns:
+        (start_command, stop_command): 如果无法通过规则生成则返回 (None, None)
+    """
+    try:
+        # 分析部署文件
+        file_analysis = _analyze_deployment_file(file_path)
+        extracted_dir_name = file_analysis.get('extracted_dir_name')
+        
+        # 生成启动命令
+        start_cmd = _generate_start_command_by_rules(
+            file_path, deploy_language, file_analysis, extracted_dir_name, application_name, port
+        )
+        
+        # 生成停止命令
+        stop_cmd = _generate_stop_command_by_rules(
+            deploy_language, file_analysis, extracted_dir_name, application_name
+        )
+        
+        # 记录结果
+        if start_cmd:
+            logger.info(f"[_generate_start_stop_commands_by_rules] Successfully generated start command for {deploy_language}")
+        else:
+            logger.warning(f"[_generate_start_stop_commands_by_rules] Failed to generate start command for {deploy_language}")
+        
+        logger.info(f"[_generate_start_stop_commands_by_rules] Generated stop command for {deploy_language}")
+        
+        return (start_cmd, stop_cmd)
+    
+    except Exception as e:
+        logger.warning(f"[_generate_start_stop_commands_by_rules] Failed to generate commands: {e}")
+        return (None, None)
