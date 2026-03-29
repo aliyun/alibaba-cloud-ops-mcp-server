@@ -17,6 +17,10 @@ Alibaba Cloud Ops MCP Server is a [Model Context Protocol (MCP)](https://modelco
 * [FC-Function AI](https://cap.console.aliyun.com/template-detail?template=237)
 * [Alibaba Cloud Model Studio](https://bailian.console.aliyun.com/?tab=mcp#/mcp-market/detail/alibaba-cloud-ops)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/aliyun-alibaba-cloud-ops-mcp-server).
+
 ## Features
 
 - **ECS Management**: Create, start, stop, reboot, delete instances, run commands, view instances, regions, zones, images, security groups, and more
