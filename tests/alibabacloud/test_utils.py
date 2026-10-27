@@ -290,4 +290,59 @@ def test_get_or_create_bucket_for_code_deploy_create_new():
         result = utils.get_or_create_bucket_for_code_deploy('test-app')
         assert result.startswith('code-deploy-')
         mock_client.put_bucket.assert_called_once()
-        mock_tag.assert_called_once() 
+        mock_tag.assert_called_once()
+
+
+def test_get_or_create_bucket_for_code_deploy_operation_error():
+    """测试创建 bucket 时 OSS 返回 OperationError（如服务未开通）"""
+    import alibabacloud_oss_v2 as oss
+    import pytest
+
+    with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.create_oss_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.find_bucket_by_tag') as mock_find:
+        mock_client = MagicMock()
+        mock_create_client.return_value = mock_client
+        mock_find.return_value = None
+        operation_error = oss.exceptions.OperationError(name='PutBucket', error=Exception('not activated'))
+        mock_client.put_bucket.side_effect = operation_error
+
+        with pytest.raises(oss.exceptions.OperationError):
+            utils.get_or_create_bucket_for_code_deploy('test-app')
+
+
+def test_get_or_create_bucket_for_code_deploy_generic_error():
+    """测试创建 bucket 时发生其他异常"""
+    import pytest
+
+    with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.create_oss_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.find_bucket_by_tag') as mock_find:
+        mock_client = MagicMock()
+        mock_create_client.return_value = mock_client
+        mock_find.return_value = None
+        mock_client.put_bucket.side_effect = RuntimeError('network down')
+
+        with pytest.raises(RuntimeError, match='network down'):
+            utils.get_or_create_bucket_for_code_deploy('test-app')
+
+
+def test_load_application_info_invalid_json():
+    """测试 application.json 内容非法时返回空字典"""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils._get_code_deploy_base_dir',
+                   return_value=utils.Path(tmp_dir)):
+            json_file = utils.Path(tmp_dir) / 'application.json'
+            json_file.write_text('{ this is not json', encoding='utf-8')
+
+            assert utils.load_application_info() == {}
+
+
+def test_save_application_info_failure():
+    """测试写入 application.json 失败时不抛异常"""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils._get_code_deploy_base_dir',
+                   return_value=utils.Path(tmp_dir)), \
+             patch('alibaba_cloud_ops_mcp_server.alibabacloud.utils.json.dump',
+                   side_effect=OSError('disk full')):
+            # 异常被捕获并记录日志，函数正常返回
+            assert utils.save_application_info({'a': 1}) is None
+ 

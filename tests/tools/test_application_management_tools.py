@@ -355,3 +355,153 @@ class TestListApplicationGroupDeployment:
         
         assert result['status'] == 'Deployed'
         assert result['deploy_execution_info'] is None
+
+    def test_list_deployment_list_executions_error(self):
+        """测试查询执行记录失败时忽略执行信息"""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.body.application_group.status = 'Deploying'
+        mock_response.body.application_group.execution_id = 'exec-123'
+        mock_client.get_application_group.return_value = mock_response
+        mock_client.list_executions.side_effect = Exception('list failed')
+
+        result = application_management_tools._list_application_group_deployment(
+            mock_client, 'test-app', 'test-group', ['Deployed']
+        )
+
+        assert result['status'] == 'Deploying'
+        assert result['deploy_execution_info'] is None
+
+
+class TestDescribeInstancesWithRetryErrors:
+    """测试 _describe_instances_with_retry 的异常分支"""
+
+    def test_raises_non_retryable_error(self):
+        """非可重试错误直接抛出"""
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools.create_ecs_client') as mock_create:
+            mock_client = MagicMock()
+            mock_client.describe_instances.side_effect = ValueError('invalid parameter')
+            mock_create.return_value = mock_client
+
+            with pytest.raises(ValueError, match='invalid parameter'):
+                application_management_tools._describe_instances_with_retry('cn-hangzhou', MagicMock())
+
+    def test_raises_last_exception_when_loop_exhausted(self):
+        """重试循环耗尽后由兜底逻辑抛出最后一次异常"""
+        class BadFdError(Exception):
+            pass
+
+        # 收窄重试循环的迭代次数，使循环正常结束后进入兜底分支
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools.create_ecs_client') as mock_create, \
+             patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools.time.sleep'), \
+             patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools.range',
+                   lambda _: [0, 1], create=True):
+            mock_client = MagicMock()
+            mock_client.describe_instances.side_effect = BadFdError(
+                'UnretryableException: Bad file descriptor'
+            )
+            mock_create.return_value = mock_client
+
+            with pytest.raises(BadFdError):
+                application_management_tools._describe_instances_with_retry('cn-hangzhou', MagicMock())
+
+
+class TestCheckInstanceHasTagError:
+    """测试 _check_instance_has_tag 查询失败的分支"""
+
+    def test_returns_false_on_error(self):
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._describe_instances_with_retry') as mock_describe:
+            mock_describe.side_effect = Exception('query failed')
+
+            result = application_management_tools._check_instance_has_tag(
+                'cn-hangzhou', 'i-test123', 'app-test', 'test-group'
+            )
+
+            assert result is False
+
+
+class TestTagMultipleInstances:
+    """测试 _tag_multiple_instances 函数"""
+
+    def test_tags_remaining_instances(self):
+        """为除首个实例外的其余实例打标签"""
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._ensure_instances_tagged') as mock_ensure:
+            application_management_tools._tag_multiple_instances(
+                'cn-hangzhou', 'test-app', 'test-group', ['i-1', 'i-2', 'i-3']
+            )
+
+            mock_ensure.assert_called_once_with('cn-hangzhou', 'test-app', 'test-group', ['i-2', 'i-3'])
+
+    def test_single_instance_does_nothing(self):
+        """只有一个实例时无需额外打标签"""
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._ensure_instances_tagged') as mock_ensure:
+            application_management_tools._tag_multiple_instances(
+                'cn-hangzhou', 'test-app', 'test-group', ['i-1']
+            )
+
+            mock_ensure.assert_not_called()
+
+
+class TestExistenceCheckErrors:
+    """测试应用/应用分组存在性检查遇到非预期错误时向上抛出"""
+
+    def test_check_application_exists_unexpected_error(self):
+        mock_client = MagicMock()
+        error = Exception('internal error')
+        error.code = 'InternalError'
+        mock_client.get_application.side_effect = error
+
+        with pytest.raises(Exception, match='internal error'):
+            application_management_tools._check_application_exists(mock_client, 'test-app')
+
+    def test_check_application_group_exists_unexpected_error(self):
+        mock_client = MagicMock()
+        error = Exception('internal error')
+        error.code = 'InternalError'
+        mock_client.get_application_group.side_effect = error
+
+        with pytest.raises(Exception, match='internal error'):
+            application_management_tools._check_application_group_exists(
+                mock_client, 'test-app', 'test-group'
+            )
+
+
+class TestHandleApplicationGroup:
+    """测试应用分组部署请求的构建"""
+
+    def test_handle_new_application_group(self):
+        """新建应用分组时创建分组并构建部署请求"""
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._ensure_instances_tagged') as mock_ensure:
+            mock_client = MagicMock()
+
+            request = application_management_tools._handle_new_application_group(
+                mock_client, 'test-app', 'test-group', 'cn-hangzhou',
+                'cn-hangzhou', 'test-bucket', 'app.tar.gz', 'v1',
+                True, 8080, ['i-1'], 'start.sh', 'stop.sh', 'java'
+            )
+
+            mock_client.create_application_group.assert_called_once()
+            mock_ensure.assert_called_once_with('cn-hangzhou', 'test-app', 'test-group', ['i-1'])
+            assert request.application_name == 'test-app'
+            deploy_parameters = json.loads(request.deploy_parameters)
+            assert deploy_parameters['Parameters']['CreateEcsOption'] == 'ExistECS'
+            assert deploy_parameters['Parameters']['PackageName'].startswith('ACS-Extension-java')
+
+    def test_handle_existing_application_group(self):
+        """已存在应用分组时创建部署版本并构建部署请求"""
+        with patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._ensure_instances_tagged'), \
+             patch('alibaba_cloud_ops_mcp_server.tools.application_management_tools._tools_api_call') as mock_api_call:
+            mock_api_call.return_value = {'body': {'Revision': {'RevisionId': 2048}}}
+
+            request = application_management_tools._handle_existing_application_group(
+                'test-app', 'test-group', 'cn-hangzhou', 'cn-hangzhou', 'test-bucket',
+                'app.tar.gz', 'v1', 'start.sh', 'stop.sh', ['i-1']
+            )
+
+            mock_api_call.assert_called_once()
+            assert request.revision_id == '2048'
+            deploy_parameters = json.loads(request.deploy_parameters)
+            inner = json.loads(json.loads(deploy_parameters['StartExecutionParameters'])['Parameters'])
+            assert inner['deployRevisionId'] == '2048'
+            assert inner['applicationGroupName'] == 'test-group'
+

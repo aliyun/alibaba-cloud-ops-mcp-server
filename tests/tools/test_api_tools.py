@@ -386,3 +386,113 @@ def test_get_service_endpoint_all_branches():
     assert _get_service_endpoint('cbn', 'cn-hangzhou') == 'cbn.aliyuncs.com'
     # 其它分支
     assert _get_service_endpoint('unknown', 'cn-test') == 'unknown.cn-test.aliyuncs.com'
+
+def test_get_service_endpoint_double_endpoint_region_not_matched():
+    """DOUBLE_ENDPOINT_SERVICE 且 region 不在中心化列表中，使用地域化 endpoint"""
+    assert api_tools._get_service_endpoint('rds', 'us-west-1') == 'rds.us-west-1.aliyuncs.com'
+
+def test_get_service_endpoint_central_service_international_env():
+    """中心化服务在 international 环境下使用国际站 endpoint"""
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.settings') as mock_settings:
+        mock_settings.env = 'international'
+        assert api_tools._get_service_endpoint('bssopenapi', 'cn-hangzhou') == 'business.ap-southeast-1.aliyuncs.com'
+
+def test_get_service_endpoint_central_service_domestic_env():
+    """中心化服务在 domestic 环境下使用中国站 endpoint"""
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.settings') as mock_settings:
+        mock_settings.env = 'domestic'
+        assert api_tools._get_service_endpoint('bssopenapi', 'us-west-1') == 'business.aliyuncs.com'
+
+def test_get_service_endpoint_central_service_unknown_env_fallback():
+    """中心化服务在未知环境且地域不属于中国站时，回退到国际站 endpoint"""
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.settings') as mock_settings:
+        mock_settings.env = 'unknown'
+        assert api_tools._get_service_endpoint('bssopenapi', 'us-west-1') == 'business.ap-southeast-1.aliyuncs.com'
+
+def test_tools_api_call_api_meta_exception_fallback():
+    """获取 API 元数据失败时回退为空元数据，仍能正常发起调用"""
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.ApiMetaClient') as mock_ApiMetaClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.create_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.open_api_models') as mock_open_api_models, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiUtilClient') as mock_OpenApiUtilClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.util_models'):
+        mock_ApiMetaClient.get_api_meta.side_effect = Exception('meta-fail')
+        mock_ApiMetaClient.get_service_version.return_value = '2023-01-01'
+        mock_ApiMetaClient.get_service_style.return_value = 'RPC'
+        mock_OpenApiUtilClient.query.return_value = {}
+        mock_create_client.return_value.call_api.return_value = {'result': 'ok'}
+
+        result = api_tools._tools_api_call('ecs', 'DescribeInstances', {'RegionId': 'cn-hangzhou'}, None)
+
+        assert result == {'result': 'ok'}
+        # 元数据缺失时使用默认的 POST 方法和根路径
+        assert mock_open_api_models.Params.call_args.kwargs['method'] == 'POST'
+        assert mock_open_api_models.Params.call_args.kwargs['pathname'] == '/'
+
+def test_tools_api_call_retry_on_bad_file_descriptor():
+    """UnretryableException 且包含 Bad file descriptor 时重试，重试后成功"""
+    from Tea.exceptions import UnretryableException
+
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.ApiMetaClient') as mock_ApiMetaClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.create_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.open_api_models'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiUtilClient') as mock_OpenApiUtilClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.util_models'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.time.sleep') as mock_sleep:
+        mock_ApiMetaClient.get_api_meta.return_value = fake_api_meta(post=True)
+        mock_ApiMetaClient.get_service_version.return_value = '2023-01-01'
+        mock_ApiMetaClient.get_service_style.return_value = 'RPC'
+        mock_OpenApiUtilClient.query.return_value = {}
+        mock_create_client.return_value.call_api.side_effect = [
+            UnretryableException(None, Exception('[Errno 9] Bad file descriptor')),
+            {'result': 'ok'},
+        ]
+
+        result = api_tools._tools_api_call('ecs', 'DescribeInstances', {'RegionId': 'cn-hangzhou'}, None)
+
+        assert result == {'result': 'ok'}
+        mock_sleep.assert_called_once_with(0.5)
+
+def test_tools_api_call_raise_on_non_retryable_error():
+    """UnretryableException 但不含 Bad file descriptor 时直接抛出"""
+    from Tea.exceptions import UnretryableException
+
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.ApiMetaClient') as mock_ApiMetaClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.create_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.open_api_models'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiUtilClient') as mock_OpenApiUtilClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.util_models'):
+        mock_ApiMetaClient.get_api_meta.return_value = fake_api_meta(post=True)
+        mock_ApiMetaClient.get_service_version.return_value = '2023-01-01'
+        mock_ApiMetaClient.get_service_style.return_value = 'RPC'
+        mock_OpenApiUtilClient.query.return_value = {}
+        mock_create_client.return_value.call_api.side_effect = UnretryableException(
+            None, Exception('connection reset')
+        )
+
+        with pytest.raises(UnretryableException):
+            api_tools._tools_api_call('ecs', 'DescribeInstances', {'RegionId': 'cn-hangzhou'}, None)
+
+def test_tools_api_call_raises_last_exception_when_loop_exhausted():
+    """重试循环耗尽后由兜底逻辑抛出最后一次异常"""
+    from Tea.exceptions import UnretryableException
+
+    # 收窄重试循环的迭代次数，使循环正常结束后进入兜底分支
+    with patch('alibaba_cloud_ops_mcp_server.tools.api_tools.ApiMetaClient') as mock_ApiMetaClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.create_client') as mock_create_client, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.open_api_models'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.OpenApiUtilClient') as mock_OpenApiUtilClient, \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.util_models'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.time.sleep'), \
+         patch('alibaba_cloud_ops_mcp_server.tools.api_tools.range', lambda _: [0, 1], create=True):
+        mock_ApiMetaClient.get_api_meta.return_value = fake_api_meta(post=True)
+        mock_ApiMetaClient.get_service_version.return_value = '2023-01-01'
+        mock_ApiMetaClient.get_service_style.return_value = 'RPC'
+        mock_OpenApiUtilClient.query.return_value = {}
+        mock_create_client.return_value.call_api.side_effect = UnretryableException(
+            None, Exception('[Errno 9] Bad file descriptor')
+        )
+
+        with pytest.raises(UnretryableException):
+            api_tools._tools_api_call('ecs', 'DescribeInstances', {'RegionId': 'cn-hangzhou'}, None)
+
