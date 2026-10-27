@@ -260,3 +260,35 @@ def test_OSS_PutObject_infer_content_type(mock_create_client):
         assert 'text/html' in result['content_type']
     finally:
         os.unlink(temp_file)
+
+
+@patch('alibaba_cloud_ops_mcp_server.tools.oss_tools.create_client')
+def test_OSS_PutObject_fallback_content_type(mock_create_client):
+    """测试 OSS_PutObject 无法推断 ContentType 时回退为二进制流"""
+    import tempfile
+    import os
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.unknownext', delete=False) as f:
+        f.write('binary-ish content')
+        temp_file = f.name
+
+    try:
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.status_code = 200
+        mock_result.etag = 'test-etag'
+        mock_result.version_id = None
+        mock_client.put_object.return_value = mock_result
+        mock_create_client.return_value = mock_client
+
+        result = oss_tools.OSS_PutObject(
+            BucketName='test-bucket',
+            ObjectKey='test/blob.unknownext',
+            FilePath=temp_file,
+            RegionId='cn-hangzhou',
+            ContentType=None
+        )
+
+        assert result['content_type'] == 'application/octet-stream'
+    finally:
+        os.unlink(temp_file)

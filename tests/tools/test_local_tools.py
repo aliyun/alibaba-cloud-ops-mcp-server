@@ -302,3 +302,127 @@ class TestLocalAnalyzeDeployStack:
             result = local_tools.LOCAL_AnalyzeDeployStack(directory=tmpdir)
             
             assert result['runtime_versions'].get('python') == '3.10.0'
+
+    def test_analyze_with_node_dockerfile(self):
+        """测试从 Dockerfile 中识别 node 基础镜像版本"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dockerfile = os.path.join(tmpdir, 'Dockerfile')
+            with open(dockerfile, 'w') as f:
+                f.write('FROM node:18-alpine\nCMD ["npm", "start"]\n')
+
+            result = local_tools.LOCAL_AnalyzeDeployStack(directory=tmpdir)
+
+            assert result['runtime_versions'].get('node_docker') == '18-alpine'
+            assert 'docker' in result['deployment_methods']
+
+    def test_analyze_with_unreadable_package_json(self):
+        """测试 package.json 内容非法时忽略版本信息"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            package_json = os.path.join(tmpdir, 'package.json')
+            with open(package_json, 'w') as f:
+                f.write('{ not valid json')
+
+            result = local_tools.LOCAL_AnalyzeDeployStack(directory=tmpdir)
+
+            assert 'node' not in result['runtime_versions']
+            assert 'npm' in result['package_managers']
+
+    def test_analyze_with_unreadable_version_and_docker_files(self):
+        """测试读取 .python-version / go.mod / Dockerfile 失败时忽略版本信息"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for filename, content in (
+                ('requirements.txt', 'flask==2.0.0\n'),
+                ('.python-version', '3.10.0'),
+                ('go.mod', 'go 1.21\n'),
+                ('Dockerfile', 'FROM node:18\n'),
+            ):
+                with open(os.path.join(tmpdir, filename), 'w') as f:
+                    f.write(content)
+
+            with patch('pathlib.Path.read_text', side_effect=OSError('unreadable')):
+                result = local_tools.LOCAL_AnalyzeDeployStack(directory=tmpdir)
+
+            assert result['runtime_versions'] == {}
+            assert 'python' in result['deployment_methods']
+
+
+class TestLocalListDirectoryInaccessibleEntries:
+    """测试 LOCAL_ListDirectory 跳过无法访问的条目"""
+
+    def test_list_directory_skips_inaccessible_entries(self):
+        """非递归模式下 stat 失败的条目被跳过"""
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, 'a.txt'), 'w') as f:
+                f.write('a')
+
+            real_stat = Path.stat
+
+            def fake_stat(self, *args, **kwargs):
+                # 仅让目录内的条目 stat 失败，保留目录本身可访问
+                if self.name == 'a.txt':
+                    raise PermissionError('denied')
+                return real_stat(self, *args, **kwargs)
+
+            with patch('pathlib.Path.stat', fake_stat):
+                result = local_tools.LOCAL_ListDirectory(path=tmpdir, recursive=False)
+
+            assert result['count'] == 0
+            assert result['items'] == []
+
+    def test_list_directory_recursive_skips_inaccessible_entries(self):
+        """递归模式下 stat 失败的条目被跳过"""
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sub_dir = os.path.join(tmpdir, 'sub')
+            os.makedirs(sub_dir)
+            with open(os.path.join(sub_dir, 'b.txt'), 'w') as f:
+                f.write('b')
+
+            real_stat = Path.stat
+
+            def fake_stat(self, *args, **kwargs):
+                if self.name in ('sub', 'b.txt'):
+                    raise OSError('broken')
+                return real_stat(self, *args, **kwargs)
+
+            with patch('pathlib.Path.stat', fake_stat):
+                result = local_tools.LOCAL_ListDirectory(path=tmpdir, recursive=True)
+
+            assert result['count'] == 0
+
+
+
+class TestLocalRunShellScriptErrors:
+    """测试 LOCAL_RunShellScript 的异常分支"""
+
+    def test_working_directory_is_file(self):
+        """working_directory 指向文件时报错"""
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(b'content')
+            temp_file = f.name
+
+        try:
+            with pytest.raises(ValueError, match="Working directory is not a directory"):
+                local_tools.LOCAL_RunShellScript(
+                    script='echo hello',
+                    working_directory=temp_file,
+                    timeout=30,
+                    shell=True
+                )
+        finally:
+            os.unlink(temp_file)
+
+    def test_command_not_found(self):
+        """命令不存在时抛出带命令名的错误"""
+        with patch('subprocess.run', side_effect=FileNotFoundError()):
+            with pytest.raises(ValueError, match="Command or script not found: no-such-cmd"):
+                local_tools.LOCAL_RunShellScript(
+                    script='no-such-cmd',
+                    working_directory=None,
+                    timeout=30,
+                    shell=False
+                )
+

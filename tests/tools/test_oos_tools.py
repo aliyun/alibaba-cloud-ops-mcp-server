@@ -80,6 +80,74 @@ def test_OOS_RunInstances():
     assert hasattr(result, 'executions')
 
 @patch('alibaba_cloud_ops_mcp_server.tools.oos_tools.create_client', fake_client)
+def test_OOS_RunInstances_with_all_optional_parameters():
+    """所有可选参数均有值，且 DataDiskParameters 为合法的非空 JSON 列表"""
+    func = get_tool_func("OOS_RunInstances")
+    with patch('alibaba_cloud_ops_mcp_server.tools.oos_tools._start_execution_sync') as mock_start:
+        func(
+            RegionId='cn-test',
+            ImageId='img',
+            InstanceType='ecs.t1',
+            SecurityGroupId='sg',
+            VSwitchId='vsw',
+            InternetMaxBandwidthOut=5,
+            Amount=2,
+            InstanceName='test',
+            SystemDiskCategory='cloud_essd',
+            SystemDiskSize='40',
+            SystemDiskName='sys-disk',
+            SystemDiskDescription='sys disk desc',
+            SystemDiskPerformanceLevel='PL1',
+            PrivateIpAddress='192.168.0.2',
+            SystemDiskAutoSnapshotPolicyId='sp-1',
+            DataDiskParameters='[{"Size":"100","Category":"cloud_essd"}]',
+            Tags=[{'Key': 'oos', 'Value': 'test'}],
+            ResourceGroupId='rg-1',
+            Description='desc',
+            HostName='host-1',
+            ZoneId='cn-hangzhou-a'
+        )
+    parameters = mock_start.call_args.kwargs['parameters']
+    assert parameters['systemDiskCategory'] == 'cloud_essd'
+    assert parameters['systemDiskSize'] == '40'
+    assert parameters['systemDiskName'] == 'sys-disk'
+    assert parameters['systemDiskDescription'] == 'sys disk desc'
+    assert parameters['tags'] == [{'Key': 'oos', 'Value': 'test'}]
+    assert parameters['description'] == 'desc'
+    assert parameters['dataDiskParameters'] == [{'Size': '100', 'Category': 'cloud_essd'}]
+
+@patch('alibaba_cloud_ops_mcp_server.tools.oos_tools.create_client', fake_client)
+def test_OOS_RunInstances_with_invalid_data_disk_parameters():
+    """DataDiskParameters 为非法 JSON 时忽略该参数而不抛错"""
+    func = get_tool_func("OOS_RunInstances")
+    with patch('alibaba_cloud_ops_mcp_server.tools.oos_tools._start_execution_sync') as mock_start:
+        func(
+            RegionId='cn-test',
+            ImageId='img',
+            InstanceType='ecs.t1',
+            SecurityGroupId='sg',
+            VSwitchId='vsw',
+            InternetMaxBandwidthOut=0,
+            Amount=1,
+            InstanceName='test',
+            SystemDiskCategory='',
+            SystemDiskSize='',
+            SystemDiskName='',
+            SystemDiskDescription='',
+            SystemDiskPerformanceLevel='',
+            PrivateIpAddress='',
+            SystemDiskAutoSnapshotPolicyId='',
+            DataDiskParameters='not-a-json',
+            Tags=[],
+            ResourceGroupId='',
+            Description='',
+            HostName='',
+            ZoneId=''
+        )
+    parameters = mock_start.call_args.kwargs['parameters']
+    assert 'dataDiskParameters' not in parameters
+
+@patch('alibaba_cloud_ops_mcp_server.tools.oos_tools.create_client', fake_client)
 def test_OOS_ResetPassword():
     func = get_tool_func("OOS_ResetPassword")
     result = func(RegionId='cn-test', InstanceIds=['i-1'], Password='Abcd1234!')

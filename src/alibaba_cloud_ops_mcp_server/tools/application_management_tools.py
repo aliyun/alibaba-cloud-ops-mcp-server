@@ -1198,8 +1198,6 @@ def _generate_start_command_by_rules(
             else:
                 test_path = base_name
             start_cmd = f"[ -f {test_path} ] && chmod +x {test_path} && nohup ./{test_path} > /root/app.log 2>&1 & || true"
-            if not start_cmd:
-                return None
     
     elif deploy_language == 'docker':
         # Docker 应用：检查是否有 Dockerfile，然后生成 docker build 和 docker run 命令

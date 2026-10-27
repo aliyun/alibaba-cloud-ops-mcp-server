@@ -533,3 +533,83 @@ def test_main_module_entry_point():
     assert result.returncode == 0
     assert 'Transport type' in result.stdout or '--transport' in result.stdout
 
+
+def test_server_module_run_as_main():
+    """以 __main__ 身份执行 server.py，覆盖模块入口点"""
+    import runpy
+    import sys
+
+    with patch.object(sys, 'argv', ['server.py', '--help']):
+        with pytest.raises(SystemExit) as exc_info:
+            runpy.run_module('alibaba_cloud_ops_mcp_server.server', run_name='__main__')
+    assert exc_info.value.code == 0
+
+
+@patch('alibaba_cloud_ops_mcp_server.server.FastMCP')
+@patch('alibaba_cloud_ops_mcp_server.server.api_tools.create_api_tools')
+def test_main_run_registers_local_tools(mock_create_api_tools, mock_FastMCP):
+    """测试普通模式下注册 local_tools 中的工具"""
+    mock_local_tool = MagicMock()
+    mock_local_tool.__name__ = 'LOCAL_ListDirectory'
+
+    with patch('alibaba_cloud_ops_mcp_server.server.oss_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.oos_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.cms_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.application_management_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.local_tools.tools', [mock_local_tool]):
+        from alibaba_cloud_ops_mcp_server import server
+        mcp = MagicMock()
+        mock_FastMCP.return_value = mcp
+        server.main.callback(transport='stdio', port=8000, host='127.0.0.1', services=None,
+                             headers_credential_only=None, env='domestic', code_deploy=False,
+                             extra_config=None, visible_tools=None)
+        # local_tools 中的工具被注册
+        mcp.tool.assert_called_once_with(mock_local_tool)
+
+
+@patch('alibaba_cloud_ops_mcp_server.server.FastMCP')
+@patch('alibaba_cloud_ops_mcp_server.server.api_tools.create_api_tools')
+@patch('alibaba_cloud_ops_mcp_server.server.logger')
+def test_register_tools_with_filter_extra_config_single_quotes(mock_logger, mock_create_api_tools, mock_FastMCP):
+    """测试白名单模式下 extra_config 使用单引号格式，且服务名需要新建条目"""
+    mock_oos_tool = MagicMock()
+    mock_oos_tool.__name__ = 'OOS_RunCommand'
+
+    with patch('alibaba_cloud_ops_mcp_server.server.oss_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.oos_tools.tools', [mock_oos_tool]), \
+         patch('alibaba_cloud_ops_mcp_server.server.cms_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.application_management_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.local_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.common_api_tools.tools', []):
+        from alibaba_cloud_ops_mcp_server import server
+        mcp = MagicMock()
+        mock_FastMCP.return_value = mcp
+        # OOS_RunCommand 已作为静态工具注册，因此 extra_config 中的 oos 需要新建条目
+        server.main.callback(transport='stdio', port=8000, host='127.0.0.1', services=None,
+                             headers_credential_only=None, env='domestic', code_deploy=False,
+                             extra_config="{'oos': ['RunCommand']}", visible_tools='OOS_RunCommand')
+        mock_create_api_tools.assert_called_once()
+        dynamic_config = mock_create_api_tools.call_args[0][1]
+        assert dynamic_config == {'oos': ['RunCommand']}
+
+
+@patch('alibaba_cloud_ops_mcp_server.server.FastMCP')
+@patch('alibaba_cloud_ops_mcp_server.server.api_tools.create_api_tools')
+@patch('alibaba_cloud_ops_mcp_server.server.logger')
+def test_register_tools_with_filter_extra_config_invalid(mock_logger, mock_create_api_tools, mock_FastMCP):
+    """测试白名单模式下 extra_config 格式非法时记录错误日志"""
+    with patch('alibaba_cloud_ops_mcp_server.server.oss_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.oos_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.cms_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.application_management_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.local_tools.tools', []), \
+         patch('alibaba_cloud_ops_mcp_server.server.common_api_tools.tools', []):
+        from alibaba_cloud_ops_mcp_server import server
+        mcp = MagicMock()
+        mock_FastMCP.return_value = mcp
+        server.main.callback(transport='stdio', port=8000, host='127.0.0.1', services=None,
+                             headers_credential_only=None, env='domestic', code_deploy=False,
+                             extra_config='invalid json', visible_tools='SLS_GetProject')
+        mock_logger.error.assert_called()
+        assert 'Failed to parse extra-config' in mock_logger.error.call_args[0][0]
+
