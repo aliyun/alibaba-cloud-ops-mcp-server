@@ -10,7 +10,4 @@ wheels/
 # Virtual environments
 .venv
 
-# uv lockfile（内网 PyPI 镜像环境生成，地址无法在公网 CI 访问，不入库）
-uv.lock
-
 .idea/
