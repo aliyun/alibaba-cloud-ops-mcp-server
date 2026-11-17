@@ -25,7 +25,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server --cov-branch --cov-report=term-missing --cov-report=xml
+          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server --cov-report=term-missing --cov-report=xml
       - name: Upload coverage to Coveralls
         if: matrix.python-version == '3.12'
         uses: coverallsapp/github-action@v2
@@ -33,3 +33,15 @@ jobs:
           file: coverage.xml
           format: cobertura
           fail-on-error: false
+      - name: Run tests with branch coverage (separate report)
+        if: matrix.python-version == '3.12'
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server --cov-branch --cov-report=term-missing --cov-report=xml:coverage-branch.xml
+      - name: Upload branch coverage report artifact
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-coverage-report
+          path: coverage-branch.xml
