@@ -25,4 +25,11 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server --cov-report=term-missing
+          uv run pytest --cov=src/alibaba_cloud_ops_mcp_server --cov-report=term-missing --cov-report=xml
+      - name: Upload coverage to Coveralls
+        if: matrix.python-version == '3.12'
+        uses: coverallsapp/github-action@v2
+        with:
+          file: coverage.xml
+          format: cobertura
+          fail-on-error: false
