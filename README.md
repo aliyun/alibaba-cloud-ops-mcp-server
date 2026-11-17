@@ -1,6 +1,8 @@
 # Alibaba Cloud Ops MCP Server
 
 [![GitHub stars](https://img.shields.io/github/stars/aliyun/alibaba-cloud-ops-mcp-server?style=social)](https://github.com/aliyun/alibaba-cloud-ops-mcp-server)
+[![unit test](https://github.com/aliyun/alibaba-cloud-ops-mcp-server/actions/workflows/python-ci.yml/badge.svg)](https://github.com/aliyun/alibaba-cloud-ops-mcp-server/actions/workflows/python-ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/aliyun/alibaba-cloud-ops-mcp-server/badge.svg?branch=master)](https://coveralls.io/github/aliyun/alibaba-cloud-ops-mcp-server?branch=master)
 
 [中文版本](./README_zh.md)
 
